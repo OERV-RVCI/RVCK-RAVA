@@ -62,6 +62,7 @@ jobs:
   lava-trigger:
     outputs:
       lava_jobid: ${{ steps.run_lava_check.outputs.lava_jobid }}
+      testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
     runs-on: 'ubuntu-latest'
 
     steps:
@@ -70,10 +71,10 @@ jobs:
           repository: ${{ inputs.testcase_repo }}
           ref: ${{ inputs.testcase_ref || 'main' }}
 
-      # - run: |
-      #     git init .
-      #     git fetch --depth=1 "https://github.com/${{ inputs.testcase_repo }}.git" "${{ inputs.testcase_ref || 'main' }}:local"
-      #     git checkout local
+      - name: install depends
+        run: |
+          sudo apt-get update
+          sudo apt-get install lavacli yq
 
       - name: gen var
         id: gen_var
@@ -85,7 +86,7 @@ jobs:
           echo "ssh_port=$(od -An -N2 -i /dev/urandom | awk -v min=10000 -v max=20000 '{print min + ($1 % (max - min + 1))}')" >> $GITHUB_OUTPUT
           qemu_job_name="${github_repo/\//_}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}"
           echo "qemu_job_name=$qemu_job_name" >> $GITHUB_OUTPUT
-          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')" >> $GITHUB_OUTPUT
+          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_url}" | awk -F'/' '{print $2}')_$(yq -r .device_type "$lava_template")" >> $GITHUB_OUTPUT
 
       - name: setup_lava_template
         shell: python3 {0}
@@ -136,23 +137,17 @@ jobs:
           data['actions'][2]['test']['definitions'][0]['repository'] = f"https://github.com/{testcase_repo}.git"
           if len(testcase_ref):
               data['actions'][2]['test']['definitions'][0]['revision'] = testcase_ref
-          data['actions'][2]['test']['definitions'][0]['name'] = f'{testitem_name}_{data["device_type"]}' 
+          data['actions'][2]['test']['definitions'][0]['name'] = f'{testitem_name}' 
           data['actions'][2]['test']['definitions'][0]['path'] = testcase_path
           data['actions'][2]['test']['definitions'][0].pop('parameters', None)
 
           with open(lava_template, 'w') as f:
               f.write(yaml.dump(data))
 
-      - name: install depends
-        run: |
-          sudo apt-get update
-          sudo apt-get install lavacli git
-
       - name: run lava check
         id: run_lava_check
         env:
           qemu_job_name: ${{ steps.gen_var.outputs.qemu_job_name }}
-          testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
         shell: bash
         run: |
           cat $lava_template
@@ -234,6 +229,7 @@ jobs:
     if: ${{ needs.lava-trigger.outputs.lava_jobid && !cancelled() }}
     env: 
       lava_jobid: ${{ needs.lava-trigger.outputs.lava_jobid }}
+      testitem_name: ${{ needs.lava-trigger.outputs.testitem_name }}
     steps:
       - name: install depends
         run: |
@@ -245,8 +241,8 @@ jobs:
         run: |
           set -x
           lava_health=$(lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ jobs show ${lava_jobid} | grep 'Health ' | awk '{print $NF}')
-          lava_results=$(lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ results ${lava_jobid} || echo "")
-        
+          lava_results=$(lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ results ${lava_jobid} "$testitem_name" || echo "")
+
           declare -A cnt_result_status=()
           while read -r st; do
             if [ "$st" = "" ]; then continue; fi
