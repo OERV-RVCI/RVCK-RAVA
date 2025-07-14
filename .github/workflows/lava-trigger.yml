@@ -263,6 +263,7 @@ jobs:
           - testcase_ref: ${testcase_ref}
           - lava_template: ${lava_template}
           - testcase_path: ${testcase_path}
+          - testitem_name: ${testitem_name}
           - kernel_download_url: ${kernel_download_url}
           - rootfs_download_url: ${rootfs_download_url}
           
