@@ -137,7 +137,7 @@ jobs:
           data['actions'][2]['test']['definitions'][0]['repository'] = f"https://github.com/{testcase_repo}.git"
           if len(testcase_ref):
               data['actions'][2]['test']['definitions'][0]['revision'] = testcase_ref
-          data['actions'][2]['test']['definitions'][0]['name'] = f'{testitem_name}' 
+          data['actions'][2]['test']['definitions'][0]['name'] = testitem_name
           data['actions'][2]['test']['definitions'][0]['path'] = testcase_path
           data['actions'][2]['test']['definitions'][0].pop('parameters', None)
 
@@ -150,9 +150,12 @@ jobs:
           qemu_job_name: ${{ steps.gen_var.outputs.qemu_job_name }}
         shell: bash
         run: |
+          echo "=========== edited lava template ==========="
           cat $lava_template
+          echo "============================================"
+
           set -ex
-          lava_jobid=$(lavacli --uri https://${{ secrets.lava_token }}@${lava_server}/RPC2/ jobs submit ${lava_template})
+          lava_jobid=$(lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ jobs submit ${lava_template})
           if [[ ! "$lava_jobid" =~ ^[0-9]+$ ]]; then echo "$lava_jobid"; exit 1; fi
           echo "lava_jobid=$lava_jobid" >> $GITHUB_OUTPUT
 
@@ -241,7 +244,7 @@ jobs:
         run: |
           set -x
           lava_health=$(lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ jobs show ${lava_jobid} | grep 'Health ' | awk '{print $NF}')
-          lava_results=$(lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ results ${lava_jobid} "$testitem_name" || echo "")
+          lava_results=$(lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ results ${lava_jobid} "0_$testitem_name" || echo "")
 
           declare -A cnt_result_status=()
           while read -r st; do
@@ -287,10 +290,4 @@ jobs:
           \`\`\`log
           $lava_results
           \`\`\`
-
-          ### setuped template
-          \`\`\`log
-          $(cat $lava_template)
-          \`\`\`
-
           EEE
