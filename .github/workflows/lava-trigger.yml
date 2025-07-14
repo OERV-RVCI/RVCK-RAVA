@@ -16,7 +16,7 @@ on:
         description: 'rootfs下载链接'
         required: false
         type: string
-        default: "https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.tar.gz "
+        default: "https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.tar.gz"
 
       testcase_repo:
         description: 'lava 仓库地址, {owner}/{repo}'
@@ -163,6 +163,8 @@ jobs:
     needs: [lava-trigger]
     if: ${{ needs.lava-trigger.outputs.lava_jobid }}
     runs-on: 'ubuntu-latest'
+    env:
+      lava_jobid: ${{ needs.lava-trigger.outputs.lava_jobid }}
     strategy:
       max-parallel: 1
       matrix:
@@ -173,7 +175,7 @@ jobs:
         with:
           path: is_lava_finish.txt
           # An explicit key for restoring and saving the cache
-          key: is_lava_finish-${{ github.run_id	}}
+          key: is_lava_finish-${{ github.run_id	}}-${{ needs.lava-trigger.outputs.lava_jobid }}
           # Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache
           lookup-only: true
       
@@ -186,8 +188,6 @@ jobs:
       - name: wait-result ${{ matrix.wait }}
         id: wait-result
         if: ${{ steps.check-result.outputs.cache-hit == false }}
-        env:
-          lava_jobid: ${{ needs.lava-trigger.outputs.lava_jobid }}
         continue-on-error: true
         run: |
           set -x
@@ -206,7 +206,7 @@ jobs:
         if: ${{ steps.wait-result.outputs.is_lava_finish }}
         uses: actions/cache@v4.2.3
         with:
-          key: is_lava_finish-${{ github.run_id	}}
+          key: is_lava_finish-${{ github.run_id	}}-${{ needs.lava-trigger.outputs.lava_jobid }}
           path: is_lava_finish.txt
           
   on-cancel:
