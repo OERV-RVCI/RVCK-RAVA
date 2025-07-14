@@ -1,0 +1,121 @@
+name: RAVA actions
+
+on:
+  workflow_call:   
+    secrets:
+      lava_token:
+        required: true
+
+jobs:
+  parse-request:
+    runs-on: 'ubuntu-latest'
+    outputs:
+      lava_template: ${{ steps.parse.outputs.lava_template }}
+      lava_testcase_url: ${{ steps.parse.outputs.lava_testcase_url }}
+      testcase_repo: ${{ steps.parse.outputs.testcase_repo }}
+      testcase_ref: ${{ steps.parse.outputs.testcase_ref }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      event_name: ${{ github.event_name }}
+      event_info: ${{ toJson(github.event) }}
+    steps:
+      - id: parse
+        run: |
+          function parse_pr() {
+            title="$1"
+            # title=[lava-job-template/qemu/qemu.yaml]-[lava-testcases/common-test/ltp/ltp.yaml]: xxx
+            if [ "$lava_template" = "" ]; then
+              lava_template=$(echo "$title" | awk -F'\\]-\\[' '{print $1}')
+              lava_template="${lava_template#\[}"
+              lava_template="${lava_template%\]*}"
+            fi
+            if [ "$lava_testcase_url" = "" ]; then
+              lava_testcase_url=$(echo "$title" | awk -F'\\]-\\[' '{print $2}')
+              lava_testcase_url="${lava_testcase_url#\[}"
+              lava_testcase_url="${lava_testcase_url%\]*}"
+            fi
+
+            ## pr 强制使用当前分支，不允许指定 / issue_comment略过
+            if [ "${{ github.event.pull_request.head.sha }}" != "" ]; then
+              testcase_repo=${{ github.event.pull_request.head.repo.full_name }}
+              testcase_ref=${{ github.event.pull_request.head.sha }}
+            fi
+          }
+
+          function parse_comment() {
+            comment_body="$1"
+            if [ "${comment_body:0:6}" != '/check' ]; then
+              return -1
+            fi
+            lava_template="$(echo "$comment_body" | awk -F'lava_template=' '{print $2}' | awk '{print $1}')"
+            lava_testcase_url="$(echo "$comment_body" | awk -F'testcase_url=' '{print $2}' | awk '{print $1}')"
+          }
+          
+          set -x
+          if [ "$event_name" = 'pull_request' ] || [ "$event_name" = 'pull_request_target' ]; then
+            parse_pr "${{ github.event.pull_request.title }}"
+          elif [ "$event_name" = 'issues' ]; then
+            parse_comment "${{ github.event.issue.body }}"
+          elif [ "$event_name" = 'issue_comment' ]; then
+            parse_comment "${{ github.event.comment.body }}"
+            if [ "${{ github.event.issue.pull_request }}" != "" ]; then
+              parse_pr "${{ github.event.issue.title }}"
+            fi
+          fi
+          set +x
+
+          echo "lava_template=$lava_template" >> $GITHUB_OUTPUT
+          echo "lava_testcase_url=$lava_testcase_url" >> $GITHUB_OUTPUT
+          echo "testcase_repo=${testcase_repo:-${{ github.repository }}}" >> $GITHUB_OUTPUT
+          echo "testcase_ref=${testcase_ref}" >> $GITHUB_OUTPUT
+
+          cat > $GITHUB_STEP_SUMMARY << EOF
+          ## LAVA Check Request
+          
+          - repository: $GH_REPO
+          - LAVA Template: $lava_template
+          - Testcase URL: $lava_testcase_url
+          - Testcase repo: $testcase_repo
+          - Testcase ref: $testcase_ref
+
+          EOF
+
+  
+  run-lava-check:
+    needs: [parse-request]
+    if: ${{ needs.parse-request.outputs.lava_template && needs.parse-request.outputs.lava_testcase_url }}
+    uses: ./.github/workflows/lava-trigger.yml
+    secrets:
+      lava_token: ${{ secrets.lava_token }}
+    with:
+      kernel_download_url: 'https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/rvck-olk/1/Image'
+      testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
+      testcase_ref: ${{ needs.parse-request.outputs.testcase_ref }}
+      lava_template: ${{ needs.parse-request.outputs.lava_template }}
+      testcase_url: ${{ needs.parse-request.outputs.lava_testcase_url }}
+  
+  collect-result:
+    runs-on: 'ubuntu-latest'
+    needs: [run-lava-check]
+    if: ${{ !cancelled() }}
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ISSUE_ID: ${{ github.event.pull_request.number || github.event.issue.number }}
+      lava_result_summary: ${{ needs.run-lava-check.outputs.summary_content }}
+    steps:
+      - run: |
+          log_dir="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          cat > summary << EEE
+          # RAVA actions result
+
+          > log: [$log_dir]($log_dir)
+          
+          $lava_result_summary
+
+          EEE
+          cat summary > $GITHUB_STEP_SUMMARY
+          if [ "$ISSUE_ID" != "" ]; then
+            gh issue comment "$ISSUE_ID" -b "$(cat summary)" -R "$GH_REPO"
+          fi

@@ -1,0 +1,69 @@
+name: RVCK CI
+
+on:
+  workflow_call:
+
+jobs:
+  parse-request:
+    uses: ./.github/workflows/parse-rvck.yml
+    secrets: inherit
+  
+  kunit-test:
+    needs: [parse-request]
+    uses: ./.github/workflows/kunit-test.yml
+    with:
+      kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
+      fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
+  
+  kernel-build:
+    needs: [parse-request]
+    uses: ./.github/workflows/kernel-build.yml
+    with:
+      kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
+      fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
+      upload_dir: "${{ github.repository }}/${{ needs.parse-request.outputs.ISSUE_ID }}"
+    secrets:
+      rync_passphrase: ${{ secrets.RSYNC_PASSPHRASE }}
+
+      
+  lava-trigger:
+    needs: [parse-request, kernel-build]
+    uses: ./.github/workflows/lava-trigger.yml
+    secrets: 
+      lava_token: ${{ secrets.LAVA_TOKEN }}
+    with:
+      testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
+      lava_template: ${{ needs.parse-request.outputs.lava_template }}
+      testcase_url: ${{ needs.parse-request.outputs.testcase_url }}
+      kernel_download_url: ${{ needs.kernel-build.outputs.kernel_download_url }}
+
+  check-patch:
+    needs: [parse-request]
+    if: ${{ needs.parse-request.outputs.SRC_REF }}
+    uses: ./.github/workflows/check-patch.yml
+    secrets: inherit
+    with:
+      kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
+      fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
+      src_ref: ${{ needs.parse-request.outputs.SRC_REF }}
+      issue_id: ${{ needs.parse-request.outputs.ISSUE_ID }}
+  
+  collect-result:
+    if: ${{ !cancelled() }}
+    needs: [parse-request, kunit-test, kernel-build, lava-trigger, check-patch]
+    uses: ./.github/workflows/collect-result.yml
+    permissions:
+      issues: write
+      pull-requests: write
+    with:
+      repo: ${{ needs.parse-request.outputs.REPO }}
+      issue_id: ${{ needs.parse-request.outputs.ISSUE_ID }}
+      kunit-test_result: ${{ needs.kunit-test.result }}
+      kernel-build_result: ${{ needs.kernel-build.result }}
+      lava-trigger_result: ${{ needs.lava-trigger.result }}
+      check-patch_result: ${{ needs.check-patch.result }}
+      kunit-test_info: ${{ needs.kunit-test.outputs.summary_content }}
+      kernel-build_info: ${{ needs.kernel-build.outputs.summary_content }}
+      lava-trigger_info: ${{ needs.lava-trigger.outputs.summary_content }}
+      check-patch_info: ${{ needs.check-patch.outputs.summary_content }}
+

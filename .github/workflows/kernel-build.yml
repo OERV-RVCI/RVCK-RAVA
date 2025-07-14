@@ -1,0 +1,144 @@
+name: kunit-build
+
+on:
+  workflow_call:
+    inputs:
+      kernel_src_repo:
+        type: string
+        required: true
+        description: '内核源码仓库'
+      
+      fetch_ref:
+        type: string
+        required: true
+        description: '内核分支或sha值'
+      
+      upload_dir:
+        type: string
+        required: true
+        description: '上传目录'
+
+    outputs:
+      kernel_download_url:
+        value: ${{ jobs.kernel-build.outputs.kernel_download_url }}
+      summary_content:
+        value: ${{ jobs.kernel-build.outputs.summary_content }}
+    
+    secrets:
+      rync_passphrase: 
+        required: true
+        description: 'rsync上传内核所需密码'
+
+jobs:
+  kernel-build:
+    runs-on:
+      group: kernel_build-runner
+    container:
+      image: 'hub.oepkgs.net/oerv-ci/rava-action-runner:latest'
+      
+    outputs:
+      kernel_download_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
+      summary_content: ${{ steps.summary.outputs.summary_content }}
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      kernel_result_dir: kernel-result
+
+    steps:
+      - name: checkout kernel-src
+        env:
+          REPO: ${{ inputs.kernel_src_repo }}
+          fetch_ref: ${{ inputs.fetch_ref }}
+        shell: bash
+        run: |
+          rm -rf kernel-src || true
+        
+          set -ex
+          git init kernel-src
+          cd kernel-src
+          git config user.email rvci@isrc.iscas.ac.cn
+          git config user.name rvci
+          git remote add origin "${REPO}"
+
+          res=false
+          for((retry_times=0; retry_times < 10; retry_times++)); do
+              if git fetch origin "$fetch_ref":"$fetch_ref" --depth=1 --progress; then
+                  res=true
+                  break
+              fi
+              sleep 5
+          done
+          if [ "$res" != "true" ]; then
+              exit 1
+          fi
+
+          git checkout "$fetch_ref"
+
+        
+      - name: run kernel build
+        id: kernel-build
+        run: |
+          cd kernel-src
+          export ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu-
+          make distclean
+          make openeuler_defconfig
+          make Image -j$(nproc)
+          make modules -j$(nproc)
+          make dtbs -j$(nproc)
+
+          make INSTALL_MOD_PATH="../$kernel_result_dir" modules_install -j$(nproc)
+          mkdir -p "../$kernel_result_dir/dtb/thead"
+          cp vmlinux "../$kernel_result_dir"
+          cp arch/riscv/boot/Image "../$kernel_result_dir/Image"
+          
+          install -m 644 $(find arch/riscv/boot/dts/ -name "*.dtb") "../$kernel_result_dir"/dtb
+          mv $(find arch/riscv/boot/dts/ -name "th1520*.dtb") "../$kernel_result_dir"/dtb/thead
+
+      - name: publish kernel
+        id: publish-kernel
+        env:
+          RSYNC_PASSWORD: ${{ secrets.rync_passphrase }}
+        run: |
+          rsync -av --progress --mkpath "${kernel_result_dir}/Image" rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
+          echo "kernel_download_url=https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/Image" >> $GITHUB_OUTPUT
+      
+      ## 归档内核构建结果
+      - name: archive kernel result
+        id: archive-kernel
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: kernel-result-${{ github.run_id	}}
+          path: kernel-result
+
+      
+      - name: summary
+        if: ${{ always() }}
+        id: summary
+        env:
+          kernel_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
+          archive_url: ${{ steps.archive-kernel.outputs.artifact-url }}
+          upload_dir: ${{ inputs.upload_dir }}
+        continue-on-error: true
+        run: |
+          if [ "$kernel_url" != "" ]; then
+            result="Kernel build succeeded: [${upload_dir}/Image](${kernel_url})"
+          else
+            result="Kernel build failed."
+          fi
+
+          cat > summary << EEE
+          ## Kernel Build Result
+          
+          $result
+
+          > Archive: [kernel-result.zip](${archive_url})
+
+          EEE
+
+          cat summary > $GITHUB_STEP_SUMMARY
+          
+          echo "summary_content<<EOF" >> $GITHUB_OUTPUT
+          cat summary >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+

@@ -1,0 +1,97 @@
+name: kunit-test
+
+on:
+  workflow_call:
+    outputs:
+      summary_content:
+        value: ${{ jobs.kunit-test.outputs.summary_content }}
+    inputs:
+      kernel_src_repo:
+        type: string
+        required: true
+        description: '内核源码仓库'
+
+      fetch_ref:
+        type: string
+        required: true
+        description: '内核分支或sha值'
+
+jobs:
+  kunit-test:
+    outputs:
+      summary_content: ${{ steps.run-kunit-test.outputs.sumary_content }}
+    runs-on: 'ubuntu-latest'
+
+
+    steps:
+      - name: install pkg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git gcc-riscv64-linux-gnu gcc-riscv64-unknown-elf make gcc g++ flex device-tree-compiler pahole dwarves libfuse-dev kmod  bzip2 xz-utils curl cpio bc libssl-dev libncurses-dev bison flex libelf-dev qemu-system-riscv64
+      
+      - name: checkout kernel-src
+        env:
+          REPO: ${{ inputs.kernel_src_repo }}
+          fetch_ref: ${{ inputs.fetch_ref }}
+        shell: bash
+        run: |
+          rm -rf kernel-src || true
+        
+          set -ex
+          git init kernel-src
+          cd kernel-src
+          git config user.email rvci@isrc.iscas.ac.cn
+          git config user.name rvci
+          git remote add origin "${REPO}"
+
+          res=false
+          for((retry_times=0; retry_times < 10; retry_times++)); do
+              if git fetch origin "$fetch_ref":"$fetch_ref" --depth=1 --progress; then
+                  res=true
+                  break
+              fi
+              sleep 5
+          done
+          if [ "$res" != "true" ]; then
+              exit 1
+          fi
+
+          git checkout "$fetch_ref"
+      
+      - name: run kunit test
+        id: run-kunit-test
+        continue-on-error: true
+        run: |
+          cd kernel-src
+          make distclean
+          git checkout .
+          ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- ./tools/testing/kunit/kunit.py run --arch=riscv > kunit.log 2>&1 || true
+          result="$(grep 'Testing complete' kunit.log || echo "kunit test failed")"
+
+          cat >> summary << EEE
+          ## Kunit Test Result
+          
+          $result
+          EEE
+
+          echo "sumary_content<<EOF" >> $GITHUB_OUTPUT
+          cat summary >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          cat > $GITHUB_STEP_SUMMARY <<- EEE
+          $(cat summary)
+
+          ### Kunit Test Log
+          
+          $(echo '```bash')
+          $(cat kunit.log)
+          $(echo '```')
+          EEE
+          
+      # - name: after
+      #   env:
+      #     ADD_LABEL: kunit-test_done
+      #   run: |
+      #     COMMENT_CONTENT="kunit test done. log: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" bash gh_actions/run.sh || true
+
+          

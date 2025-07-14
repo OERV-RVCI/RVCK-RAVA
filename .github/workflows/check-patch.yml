@@ -1,0 +1,129 @@
+on:
+  workflow_call:
+    outputs:
+      summary_content:
+        value: ${{ jobs.check-patch.outputs.summary_content }}
+
+    inputs:
+      kernel_src_repo:
+        type: string
+        required: true
+        description: '内核源码仓库'
+      fetch_ref:
+        type: string
+        required: true
+        description: 'pr 合入分支或sha值'
+      src_ref:
+        type: string
+        required: true
+        description: 'pr base分支或sha值'
+      issue_id:
+        type: string
+        required: false
+
+jobs:
+  check-patch:
+    outputs:
+      summary_content: ${{ steps.check-patch.outputs.summary_content }}
+    runs-on: 'ubuntu-latest'
+    container:
+      image: 'hub.oepkgs.net/oerv-ci/rava-action-runner:latest'
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ISSUE_ID: ${{ inputs.issue_id }}
+      REPO: ${{ inputs.kernel_src_repo }}
+    
+    steps:
+      - name: checkout kernel-src
+        shell: bash
+        run: |
+            rm -rf kernel-src || true
+            git init kernel-src
+            cd kernel-src
+            set -e
+            git config user.email rvci@isrc.iscas.ac.cn
+            git config user.name rvci
+            git remote add origin "${REPO}"
+
+            for fetch_ref in "${{ inputs.fetch_ref }}" "${{ inputs.src_ref }}"; do
+                res=false
+                for((retry_times=0; retry_times < 10; retry_times++)); do
+                    if git fetch origin "$fetch_ref":"$fetch_ref" --progress; then
+                        res=true
+                        break
+                    fi
+                    sleep 5
+                done
+                if [ "$res" != "true" ]; then
+                    exit 1
+                fi
+            done
+
+            git checkout "${{ inputs.fetch_ref }}"
+      
+      # - name: before
+      #   env:
+      #     ADD_LABEL: check-patch_checking
+      #     COMMENT_CONTENT: start check patch
+      #   run: bash gh_actions/run.sh || true
+
+      - name: check patch
+        id: check-patch
+        continue-on-error: true
+        env:
+          FETCH_REF: ${{ inputs.fetch_ref }}
+          SRC_REF: ${{ inputs.src_ref }}
+        run: |
+        
+          patch_dir=patch-$(date +%Y%m%d%H%M%S)
+          cd "kernel-src" 
+        
+          git log --oneline "${SRC_REF}".."${FETCH_REF}"
+        
+          rm -rf "$patch_dir" || true
+          mkdir -p "$patch_dir"
+          git format-patch "${SRC_REF}".."${FETCH_REF}" -o "$patch_dir"
+
+          echo "begin to check patches..."
+          set +e
+          ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- ./scripts/checkpatch.pl "$patch_dir"/*.patch --show-types \
+              --ignore CONFIG_DESCRIPTION,FILE_PATH_CHANGES,GERRIT_CHANGE_ID,GIT_COMMIT_ID,UNKNOWN_COMMIT_ID,FROM_SIGN_OFF_MISMATCH,REPEATED_WORD,COMMIT_COMMENT_SYMBOL,BLOCK_COMMENT_STYLE,AVOID_EXTERNS,AVOID_BUG > "$patch_dir/checkpatch.log"
+          total_error=$(grep -cE "ERROR" "$patch_dir/checkpatch.log")
+          total_warn=$(grep -cE "WARNING" "$patch_dir/checkpatch.log")
+          set -e
+
+          echo "check patches result: $total_error errors, $total_warn warnings." > check-patch-result
+          
+          cat > summary_content << EEE
+          ## Check Patch Result
+          
+          | | |
+          |---|---|
+          | Total Errors | $total_error |
+          | Total Warnings | $total_warn |
+          EEE
+
+          echo "summary_content<<EOF" >> $GITHUB_OUTPUT
+          cat summary_content >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          cat > $GITHUB_STEP_SUMMARY <<- EEE
+          $(cat summary_content)
+          
+          ### Check Patch Log
+          
+          $(echo '```log')
+          $(cat $patch_dir/checkpatch.log)
+          $(echo '```')
+          EEE
+          
+
+  
+      # - name: after
+      #   env:
+      #     ADD_LABEL: check-patch_done
+      #   run: |
+      #     COMMENT_CONTENT="check patch done. log: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" bash gh_actions/run.sh || true
+
+
+    

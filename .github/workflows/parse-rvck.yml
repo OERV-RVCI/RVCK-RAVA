@@ -1,0 +1,233 @@
+name: parse-request
+
+on:
+  workflow_call:
+    inputs:
+
+      x_github_event:
+        type: string
+        description: 'GitHub event type'
+        required: false
+        default: ${{ github.event_name }}
+      payload:
+        type: string
+        description: 'GitHub webhook payload'
+        required: false
+        default: ${{ toJson(github.event) }}
+    
+    outputs: 
+      REPO:
+        description: 'kernel repo'
+        value: ${{ jobs.parse-request.outputs.REPO }}
+      FETCH_REF:
+        description: '需要拉取的代码分支或commit_sha'
+        value: ${{ jobs.parse-request.outputs.FETCH_REF }}
+      SRC_REF:
+        description: 'pr请求, base分支'
+        value: ${{ jobs.parse-request.outputs.SRC_REF }}
+      ISSUE_ID:
+        description: 'pr|issue请求, issue id'
+        value: ${{ jobs.parse-request.outputs.ISSUE_ID }}
+      NEED_RUN_JOB:
+        description: '需要执行的job'
+        value: ${{ jobs.parse-request.outputs.NEED_RUN_JOB }}
+      testcase_repo:
+        description: lava 仓库地址
+        value: ${{ jobs.parse-request.outputs.testcase_repo }}
+      lava_template:
+        description: lava测试模板
+        value: ${{ jobs.parse-request.outputs.lava_template }}
+      testcase_url:
+        description: lava 需要执行的用例yaml 文件路径
+        value: ${{ jobs.parse-request.outputs.testcase_url }}
+
+   
+jobs:
+  parse-request:
+    runs-on: 'ubuntu-latest'
+    outputs:
+      REPO: ${{ steps.parse-request.outputs.REPO }}
+      FETCH_REF: ${{ steps.parse-request.outputs.FETCH_REF }}
+      SRC_REF: ${{ steps.parse-request.outputs.SRC_REF }}
+      ISSUE_ID: ${{ steps.parse-request.outputs.ISSUE_ID }}
+      NEED_RUN_JOB: ${{ steps.parse-request.outputs.NEED_RUN_JOB }}
+      testcase_repo: ${{ steps.parse-request.outputs.testcase_repo }}
+      lava_template: ${{ steps.parse-request.outputs.lava_template }}
+      testcase_url: ${{ steps.parse-request.outputs.testcase_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      x_github_event: ${{ inputs.x_github_event }}
+      payload: ${{ inputs.payload }}
+    steps:
+      - name: show-info
+        env:
+          action_repository: ${{ github.action_repository	}}
+        run: |
+          echo "action_repository: ${action_repository}"
+          echo "event_type: $x_github_event"
+          echo "webhook_event: ${payload}"
+      - shell: python3 {0}
+        env:
+          github_repo: ${{ github.repository	}}
+        run: |
+          #!/bin/python3
+
+          import json
+          import os
+
+
+          def write_properties_file(info: dict):
+              for k, v in info.items():
+                  if v is None:
+                      continue
+                  open(k, 'w').write(str(v))
+
+          def parse_comment(comment: str):
+              """解析comment内容, /check"""
+
+              if not comment.strip().startswith("/check"):
+                  print(comment.strip(), "| not found /check, ignore")
+                  return None
+              
+              res = {}
+              if len("/check") == len(comment.strip()):
+                  return res
+
+              import shlex
+              data = {
+                  item[0]: item[1].strip("'\"") if len(item) == 2 else ""
+                  for item in [
+                      str(i).split('=',maxsplit=1)
+                  for i in shlex.split(comment.strip()[6:])]
+              }
+              for k in ['lava_template','testcase_url', 'fetch', 'job']:
+                  if k in data:
+                      res[k] = data.pop(k)
+              res["testcase_params"] = "\n".join([f"{k}={v}" for k, v in data.items()])
+
+              # 检查文件是否存在
+              for k in ['lava_template','testcase_url',]:
+                  if k in res and os.system(f'gh api repos/RVCK-Project/lavaci/contents/{res[k]}'):
+                      raise Exception(f"{k}={res[k]} not found in RVCK-Project/lavaci")
+
+              print("\n\n--------------------------------")
+              for k, v in res.items():
+                  print(f"{k} = '{v}'")
+              print("--------------------------------\n")
+
+              return res
+
+          def get_pr_src_ref(pr_id, repo):
+              """pr base分支"""
+              return json.loads(os.popen(f"gh pr view {pr_id} --json baseRefName -R {repo}").read())["baseRefName"]
+              
+
+          def issue_comment(payload: dict):
+              """pr|issue comment 触发"""
+
+              # comment 创建
+              if payload["action"] != "created":
+                  return
+
+              res = parse_comment(str(payload["comment"]["body"]))
+
+              if res is None:
+                  return
+
+              res["REPO"] = payload["repository"]["clone_url"]
+              res["ISSUE_ID"] = payload["issue"]["number"]
+
+              # FETCH_REF
+              if "pull_request" in payload["issue"]:  # pr
+                  res["FETCH_REF"] = f"pull/{res['ISSUE_ID']}/head"
+                  res["SRC_REF"] = get_pr_src_ref(res["ISSUE_ID"], res["REPO"])
+                  # res["PATCH_URL"] = payload["issue"]["pull_request"]["patch_url"]
+              else:
+                  if "fetch" not in res:
+                      raise Exception("params:fetch is required")
+                  res["FETCH_REF"] = res.pop("fetch")
+              
+              write_properties_file(res)
+
+
+          def pull_request_target(payload: dict):
+              # pr 创建
+              if payload["action"] not in ["opened", "reopend", "synchronize"]:
+                  return
+              
+              print(f"from pr {payload['action']}")
+
+              res = parse_comment(str(payload["pull_request"]["body"]))
+              if res is None:
+                  res = {}
+
+              res["REPO"] = payload["repository"]["clone_url"]
+              res["ISSUE_ID"] = payload["number"]
+              res["FETCH_REF"] = f"pull/{res['ISSUE_ID']}/head"
+              res["SRC_REF"] = get_pr_src_ref(res["ISSUE_ID"], res["REPO"])
+
+              write_properties_file(res)
+
+
+          def issues(payload: dict):
+              # issue 创建
+              if payload["action"] != "opened":
+                  return
+              
+              # 解析内容
+              res = parse_comment(str(payload["issue"]["body"]))
+              if res is None:
+                  return
+
+              if not len(res.get("fetch", "")):
+                  raise Exception("params:fetch is required")
+              res["FETCH_REF"] = res.pop("fetch")
+              res["REPO"] = payload["repository"]["clone_url"]
+              res["ISSUE_ID"] = payload["issue"]["number"]
+
+              write_properties_file(res)
+
+
+
+          support_actions = {
+              i.__name__: i
+              for i in [issue_comment, pull_request_target, issues]
+          }
+
+
+          def main():
+              gh_event = os.getenv("x_github_event", "")
+
+              if gh_event not in support_actions:
+                  raise Exception("unknown event:", gh_event)
+
+              support_actions[gh_event](payload=json.loads(os.getenv("payload", '{}')))
+
+
+          if __name__ == "__main__":
+              p= os.getenv("payload", "")
+              if len(p):
+                  main()
+
+
+      - id: parse-request
+        run: |
+          echo "REPO=$(cat REPO)" >> $GITHUB_OUTPUT
+          echo "FETCH_REF=$(cat FETCH_REF)" >> $GITHUB_OUTPUT
+          echo "SRC_REF=$(cat SRC_REF)" >> $GITHUB_OUTPUT
+          echo "ISSUE_ID=$(cat ISSUE_ID)" >> $GITHUB_OUTPUT
+          echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_OUTPUT
+          echo "testcase_repo=$(cat testcase_repo || echo 'RVCK-Project/lavaci')" >> $GITHUB_OUTPUT
+          echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_OUTPUT
+          echo "testcase_url=$(cat testcase_url || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_OUTPUT
+
+          echo "REPO=$(cat REPO)" >> $GITHUB_ENV
+          echo "FETCH_REF=$(cat FETCH_REF)" >> $GITHUB_ENV
+          echo "SRC_REF=$(cat SRC_REF)" >> $GITHUB_ENV
+          echo "ISSUE_ID=$(cat ISSUE_ID)" >> $GITHUB_ENV
+          echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_ENV
+          echo "testcase_repo=$(cat testcase_repo || echo 'https://github.com/RVCK-Project/lavaci.git')" >> $GITHUB_ENV
+          echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_ENV
+          echo "testcase_url=$(cat testcase_url || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_ENV
+          
+
