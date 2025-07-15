@@ -16,7 +16,7 @@ on:
         description: 'rootfs下载链接'
         required: false
         type: string
-        default: "https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.zst"
+        default: "https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.tar.gz "
 
       testcase_repo:
         description: 'lava 仓库地址, {owner}/{repo}'
