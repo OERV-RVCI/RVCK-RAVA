@@ -11,7 +11,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     outputs:
       lava_template: ${{ steps.parse.outputs.lava_template }}
-      lava_testcase_url: ${{ steps.parse.outputs.lava_testcase_url }}
+      lava_testcase_path: ${{ steps.parse.outputs.lava_testcase_path }}
       testcase_repo: ${{ steps.parse.outputs.testcase_repo }}
       testcase_ref: ${{ steps.parse.outputs.testcase_ref }}
     env:
@@ -30,10 +30,10 @@ jobs:
               lava_template="${lava_template#\[}"
               lava_template="${lava_template%\]*}"
             fi
-            if [ "$lava_testcase_url" = "" ]; then
-              lava_testcase_url=$(echo "$title" | awk -F'\\]-\\[' '{print $2}')
-              lava_testcase_url="${lava_testcase_url#\[}"
-              lava_testcase_url="${lava_testcase_url%\]*}"
+            if [ "$lava_testcase_path" = "" ]; then
+              lava_testcase_path=$(echo "$title" | awk -F'\\]-\\[' '{print $2}')
+              lava_testcase_path="${lava_testcase_path#\[}"
+              lava_testcase_path="${lava_testcase_path%\]*}"
             fi
 
             ## pr 强制使用当前分支，不允许指定 / issue_comment略过
@@ -49,7 +49,7 @@ jobs:
               return -1
             fi
             lava_template="$(echo "$comment_body" | awk -F'lava_template=' '{print $2}' | awk '{print $1}')"
-            lava_testcase_url="$(echo "$comment_body" | awk -F'testcase_url=' '{print $2}' | awk '{print $1}')"
+            lava_testcase_path="$(echo "$comment_body" | awk -F'testcase_url=' '{print $2}' | awk '{print $1}')"
           }
           
           set -x
@@ -66,7 +66,7 @@ jobs:
           set +x
 
           echo "lava_template=$lava_template" >> $GITHUB_OUTPUT
-          echo "lava_testcase_url=$lava_testcase_url" >> $GITHUB_OUTPUT
+          echo "lava_testcase_path=$lava_testcase_path" >> $GITHUB_OUTPUT
           echo "testcase_repo=${testcase_repo:-${{ github.repository }}}" >> $GITHUB_OUTPUT
           echo "testcase_ref=${testcase_ref}" >> $GITHUB_OUTPUT
 
@@ -75,7 +75,7 @@ jobs:
           
           - repository: $GH_REPO
           - LAVA Template: $lava_template
-          - Testcase URL: $lava_testcase_url
+          - Testcase URL: $lava_testcase_path
           - Testcase repo: $testcase_repo
           - Testcase ref: $testcase_ref
 
@@ -84,7 +84,7 @@ jobs:
   
   run-lava-check:
     needs: [parse-request]
-    if: ${{ needs.parse-request.outputs.lava_template && needs.parse-request.outputs.lava_testcase_url }}
+    if: ${{ needs.parse-request.outputs.lava_template && needs.parse-request.outputs.lava_testcase_path }}
     uses: ./.github/workflows/lava-trigger.yml
     secrets:
       lava_token: ${{ secrets.lava_token }}
@@ -93,7 +93,7 @@ jobs:
       testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
       testcase_ref: ${{ needs.parse-request.outputs.testcase_ref }}
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
-      testcase_url: ${{ needs.parse-request.outputs.lava_testcase_url }}
+      testcase_path: ${{ needs.parse-request.outputs.lava_testcase_path }}
   
   collect-result:
     runs-on: 'ubuntu-latest'
