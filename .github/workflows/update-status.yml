@@ -1,0 +1,43 @@
+name: update status
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: 仓库
+      id:
+        type: string
+        required: true
+        description: 'pr|issue|comment id'
+      event_name:
+        required: true
+        type: string
+        description: '事件类型, pr|issue|comment'
+      append_content:
+        type: string
+        description: '追加内容'
+    secrets:
+      gh_token:
+        required: true
+
+env:
+  GH_TOKEN: ${{ secrets.gh_token }}
+  GH_REPO: ${{ inputs.repo }}
+  event_name: ${{ inputs.event_name }}
+  append_conent: ${{ inputs.append_content }}
+
+jobs:
+  update-status:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: show-info
+        run: |
+          cat > $GITHUB_STEP_SUMMARY << EEE
+          | | |
+          |:-:|:-:|
+          |repo| $GH_REPO |
+          |event|$event_name |
+          |append_content | $append_conent |
+          EEE
