@@ -74,7 +74,7 @@ jobs:
 
           cat > summary << EOF
           ---
-          **开始检查, log: [$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID]()**
+          **开始检查, log: []($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)**
           
           |args|value|
           |:-:|:-:|
@@ -96,7 +96,7 @@ jobs:
         run: |
           cat > summary << EOF
           ---
-          参数解析失败, log: [$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID]()
+          参数解析失败, log: []($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
           ---
           EOF
           echo "summary<<EOF" >> $GITHUB_OUTPUT
@@ -149,6 +149,4 @@ jobs:
       append_content: |
         # RAVA actions result
 
-        > log: [$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID]()
-
-        $lava_result_summary
+        ${{ needs.run-lava-check.outputs.summary_content }}
