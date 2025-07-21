@@ -71,10 +71,10 @@ jobs:
           echo "lava_testcase_path=$lava_testcase_path" >> $GITHUB_OUTPUT
           echo "testcase_repo=${testcase_repo}" >> $GITHUB_OUTPUT
           echo "testcase_ref=${testcase_ref}" >> $GITHUB_OUTPUT
-
+          log_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           cat > summary << EOF
           ---
-          **开始检查, log: []($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)**
+          **开始检查, log: [$log_url]($log_url)**
           
           |args|value|
           |:-:|:-:|
@@ -94,9 +94,10 @@ jobs:
       - id: onfailure
         if: ${{ failure() }}
         run: |
+          log_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           cat > summary << EOF
           ---
-          参数解析失败, log: []($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+          参数解析失败, log: [$log_url]($log_url)
           ---
           EOF
           echo "summary<<EOF" >> $GITHUB_OUTPUT
