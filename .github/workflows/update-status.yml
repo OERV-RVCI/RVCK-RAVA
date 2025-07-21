@@ -27,7 +27,7 @@ env:
   GH_REPO: ${{ inputs.repo }}
   event_id: ${{ inputs.event_id }}
   event_name: ${{ inputs.event_name }}
-  append_conent: ${{ inputs.append_content }}
+  append_content: ${{ inputs.append_content }}
 
 jobs:
   update-status:
@@ -41,7 +41,7 @@ jobs:
           |repo| $GH_REPO |
           |event name |$event_name |
           |event id |$event_id |
-          |append_content | $append_conent |
+          |append_content | $append_content |
           EEE
       - name: issue_comment
         if: ${{ env.event_name == 'issue_comment' }}
@@ -56,5 +56,6 @@ jobs:
           $append_content
           EEE
           )
+          set -x
           echo $new_content
           gh issue edit "$event_id" -b "$new_content"
