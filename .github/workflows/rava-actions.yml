@@ -65,10 +65,11 @@ jobs:
             fi
           fi
           set +x
+          testcase_repo=${testcase_repo:-${{ github.repository }}}
 
           echo "lava_template=$lava_template" >> $GITHUB_OUTPUT
           echo "lava_testcase_path=$lava_testcase_path" >> $GITHUB_OUTPUT
-          echo "testcase_repo=${testcase_repo:-${{ github.repository }}}" >> $GITHUB_OUTPUT
+          echo "testcase_repo=${testcase_repo}" >> $GITHUB_OUTPUT
           echo "testcase_ref=${testcase_ref}" >> $GITHUB_OUTPUT
 
           cat > summary << EOF
