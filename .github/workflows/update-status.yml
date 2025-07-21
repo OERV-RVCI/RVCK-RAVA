@@ -41,7 +41,7 @@ jobs:
           |repo| $GH_REPO |
           |event name |$event_name |
           |event id |$event_id |
-          |append_content | "$(echo "${append_content}" | tr '\n' '\\')" |
+          |append_content | "\`$(echo "${append_content}" | tr '\n' '\\')\`" |
           EEE
    
       - name: append-content
@@ -58,7 +58,7 @@ jobs:
           
           new_content=$(cat <<EEE
           $content
-          
+
           $append_content
           EEE
           )
