@@ -43,19 +43,36 @@ jobs:
           |event id |$event_id |
           |append_content | $append_content |
           EEE
-      - name: issue_comment
-        if: ${{ env.event_name == 'issue_comment' }}
+   
+      - name: append-content
         run: |
-         echo todo
-      - name: pr|issue
-        if: ${{ env.event_name == 'issues' || env.event_name == 'pull_request_target' }}
-        run: |
-          content=$(gh issue view "$event_id" --json body  -q '.body')
+          set -x
+          case $event_name in
+          issue_comment)
+            content=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/${GH_REPO}/issues/comments/$event_id | jq -r '.body')
+            ;;
+          issues|pull_request_target)
+            content=$(gh issue view "$event_id" --json body  -q '.body')
+            ;;
+          esac
+          
           new_content=$(cat <<EEE
           $content
           $append_content
           EEE
           )
-          set -x
+          
           echo $new_content
-          gh issue edit "$event_id" -b "$new_content"
+          
+          case $event_name in
+          issue_comment)
+          gh api --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${GH_REPO}/issues/comments/${event_id} \
+            -f "body=$new_content"
+            ;;
+          issues|pull_request_target)
+            gh issue edit "$event_id" -b "$new_content"
+            ;;
+          esac
