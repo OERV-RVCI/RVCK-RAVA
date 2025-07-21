@@ -7,7 +7,7 @@ on:
         type: string
         required: true
         description: 仓库
-      id:
+      event_id:
         type: string
         required: true
         description: 'pr|issue|comment id'
@@ -25,6 +25,7 @@ on:
 env:
   GH_TOKEN: ${{ secrets.gh_token }}
   GH_REPO: ${{ inputs.repo }}
+  event_id: ${{ inputs.event_id }}
   event_name: ${{ inputs.event_name }}
   append_conent: ${{ inputs.append_content }}
 
@@ -35,9 +36,25 @@ jobs:
       - name: show-info
         run: |
           cat > $GITHUB_STEP_SUMMARY << EEE
-          | | |
+          | input | value |
           |:-:|:-:|
           |repo| $GH_REPO |
-          |event|$event_name |
+          |event name |$event_name |
+          |event id |$event_id |
           |append_content | $append_conent |
           EEE
+      - name: issue_comment
+        if: ${{ env.event_name == 'issue_comment' }}
+        run: |
+         echo todo
+      - name: pr|issue
+        if: ${{ env.event_name == 'issues' || env.event_name == 'pull_request_target' }}
+        run: |
+          content=$(gh issue view "$event_id" --json body  -q '.body')
+          new_content=$(cat <<EEE
+          $content
+          $append_content
+          EEE
+          )
+          echo $new_content
+          gh issue edit "$event_id" -b "$new_content"
