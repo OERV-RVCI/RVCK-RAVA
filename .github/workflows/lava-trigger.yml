@@ -86,7 +86,7 @@ jobs:
           echo "ssh_port=$(od -An -N2 -i /dev/urandom | awk -v min=10000 -v max=20000 '{print min + ($1 % (max - min + 1))}')" >> $GITHUB_OUTPUT
           qemu_job_name="${github_repo/\//_}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}"
           echo "qemu_job_name=$qemu_job_name" >> $GITHUB_OUTPUT
-          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_url}" | awk -F'/' '{print $2}')_$(yq -r .device_type "$lava_template")" >> $GITHUB_OUTPUT
+          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_$(yq -r .device_type "$lava_template")" >> $GITHUB_OUTPUT
 
       - name: setup_lava_template
         shell: python3 {0}
