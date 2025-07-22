@@ -111,7 +111,7 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
-    uses: OERV-RVCI/RVCK-RAVA/.github/workflows/update-status.yml@develop/result-show
+    uses: ./.github/workflows/update-status.yml
     secrets: 
       gh_token: ${{ secrets.github_token }}
     with:
@@ -140,7 +140,7 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
-    uses: OERV-RVCI/RVCK-RAVA/.github/workflows/update-status.yml@develop/result-show
+    uses: ./.github/workflows/update-status.yml
     secrets: 
       gh_token: ${{ secrets.github_token }}
     with:
