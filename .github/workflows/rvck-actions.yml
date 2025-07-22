@@ -11,7 +11,7 @@ jobs:
     
   pre-check:
     needs: [parse-request]
-    if: ${{ !cancelled() && needs.parse-request.outputs.REPO }}
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.parse-request.outputs.REPO }}
     permissions:
       issues: write
       pull-requests: write

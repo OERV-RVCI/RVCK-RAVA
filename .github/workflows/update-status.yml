@@ -51,8 +51,11 @@ jobs:
           issue_comment)
             content=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/${GH_REPO}/issues/comments/$event_id | jq -r '.body')
             ;;
-          issues|pull_request_target)
+          issues)
             content=$(gh issue view "$event_id" --json body  -q '.body')
+            ;;
+          pull_request_target)
+            content=""
             ;;
           esac
           
@@ -73,7 +76,10 @@ jobs:
             /repos/${GH_REPO}/issues/comments/${event_id} \
             -f "body=$new_content"
             ;;
-          issues|pull_request_target)
+          issues)
             gh issue edit "$event_id" -b "$new_content"
+            ;;
+          pull_request_target)
+            gh pr comment "$event_id" -b "$new_content"
             ;;
           esac

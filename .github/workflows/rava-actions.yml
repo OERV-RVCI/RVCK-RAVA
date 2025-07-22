@@ -107,7 +107,7 @@ jobs:
   
   pre-check:
     needs: [parse-request]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' }}
     permissions:
       issues: write
       pull-requests: write
