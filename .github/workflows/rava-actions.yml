@@ -49,7 +49,7 @@ jobs:
               return -1
             fi
             lava_template="$(echo "$comment_body" | awk -F'lava_template=' '{print $2}' | awk '{print $1}')"
-            lava_testcase_path="$(echo "$comment_body" | awk -F'testcase_url=' '{print $2}' | awk '{print $1}')"
+            lava_testcase_path="$(echo "$comment_body" | awk -F'testcase_path=' '{print $2}' | awk '{print $1}')"
           }
           
           set -x

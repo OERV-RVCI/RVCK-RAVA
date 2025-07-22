@@ -88,7 +88,7 @@ jobs:
           qemu_job_name="${github_repo/\//_}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}"
           echo "qemu_job_name=$qemu_job_name" >> $GITHUB_OUTPUT
           device_type="$(yq -r .device_type "$lava_template")"
-          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_url}" | awk -F'/' '{print $2}')_${device_type}" >> $GITHUB_OUTPUT
+          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_${device_type}" >> $GITHUB_OUTPUT
           rootfs_download_url="${input_rootfs_download_url}"
           if [ -z "$rootfs_download_url" ]; then
             if [ "$device_type" = qemu ]; then
@@ -98,6 +98,7 @@ jobs:
             fi
           fi
           echo "rootfs_download_url=$rootfs_download_url" >> $GITHUB_OUTPUT
+
       - name: setup_lava_template
         shell: python3 {0}
         env:
