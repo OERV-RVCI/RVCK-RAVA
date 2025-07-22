@@ -66,7 +66,7 @@ jobs:
     with:
       testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
-      testcase_path: ${{ needs.parse-request.outputs.testcase_url }}
+      testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_download_url: ${{ needs.kernel-build.outputs.kernel_download_url }}
 
   check-patch:
