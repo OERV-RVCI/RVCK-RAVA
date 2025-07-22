@@ -193,7 +193,7 @@ jobs:
           set -x
           while true; do
             lava_state=$(lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ jobs show ${lava_jobid} | grep 'state ' | awk '{print $NF}')
-            if [ "$lava_state" = 'Running' ] || [ "$lava_state" = Submitted ]; then
+            if [ "$lava_state" = 'Running' ] || [ "$lava_state" = Submitted ] || [ "$lava_state" = Scheduled ]; then
               lavacli --uri https://${lava_admin_token}@${lava_server}/RPC2/ jobs wait --polling 60 ${lava_jobid} || true
             else
               echo "is_lava_finish=true" >> $GITHUB_OUTPUT
