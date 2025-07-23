@@ -26,7 +26,7 @@ jobs:
         
         ---
 
-        **开始测试 log: [$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)**
+        **开始测试 log: [${{github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}](${{github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})**
 
           |args|value|
           |:-:|:-:|
@@ -96,8 +96,6 @@ jobs:
       append_content: |
         
         # RVCK result
-
-        > log: [$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
 
         | check | result |
         | :-: | :-: |
