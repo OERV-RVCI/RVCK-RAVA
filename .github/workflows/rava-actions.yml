@@ -14,6 +14,7 @@ jobs:
       lava_testcase_path: ${{ steps.parse.outputs.lava_testcase_path }}
       testcase_repo: ${{ steps.parse.outputs.testcase_repo }}
       testcase_ref: ${{ steps.parse.outputs.testcase_ref }}
+      summary: ${{ steps.parse.outputs.summary || steps.onfailure.outputs.summary }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
@@ -64,22 +65,60 @@ jobs:
             fi
           fi
           set +x
+          testcase_repo=${testcase_repo:-${{ github.repository }}}
 
           echo "lava_template=$lava_template" >> $GITHUB_OUTPUT
           echo "lava_testcase_path=$lava_testcase_path" >> $GITHUB_OUTPUT
-          echo "testcase_repo=${testcase_repo:-${{ github.repository }}}" >> $GITHUB_OUTPUT
+          echo "testcase_repo=${testcase_repo}" >> $GITHUB_OUTPUT
           echo "testcase_ref=${testcase_ref}" >> $GITHUB_OUTPUT
-
-          cat > $GITHUB_STEP_SUMMARY << EOF
-          ## LAVA Check Request
+          log_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          cat > summary << EOF
+          ---
+          **开始检查, log: [$log_url]($log_url)**
           
-          - repository: $GH_REPO
-          - LAVA Template: $lava_template
-          - Testcase URL: $lava_testcase_path
-          - Testcase repo: $testcase_repo
-          - Testcase ref: $testcase_ref
-
+          |args|value|
+          |:-:|:-:|
+          |repository | $GH_REPO |
+          |LAVA Template | $lava_template |
+          |Testcase path | $lava_testcase_path |
+          |Testcase repo | $testcase_repo |
+          |Testcase ref | $testcase_ref |
+          ---
           EOF
+
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          cat summary >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          cat summary >> $GITHUB_STEP_SUMMARY
+      - id: onfailure
+        if: ${{ failure() }}
+        run: |
+          log_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          cat > summary << EOF
+          ---
+          参数解析失败, log: [$log_url]($log_url)
+          ---
+          EOF
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          cat summary >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  
+  pre-check:
+    needs: [parse-request]
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' }}
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/update-status.yml
+    secrets: 
+      gh_token: ${{ secrets.github_token }}
+    with:
+      repo: ${{ github.repository }}
+      event_name: ${{ github.event_name }}
+      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.issue.number }}
+      append_content: ${{ needs.parse-request.outputs.summary }}
 
   
   run-lava-check:
@@ -96,26 +135,19 @@ jobs:
       testcase_path: ${{ needs.parse-request.outputs.lava_testcase_path }}
   
   collect-result:
-    runs-on: 'ubuntu-latest'
     needs: [run-lava-check]
     if: ${{ !cancelled() }}
-    env:
-      GH_REPO: ${{ github.repository }}
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ISSUE_ID: ${{ github.event.pull_request.number || github.event.issue.number }}
-      lava_result_summary: ${{ needs.run-lava-check.outputs.summary_content }}
-    steps:
-      - run: |
-          log_dir="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          cat > summary << EEE
-          # RAVA actions result
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/update-status.yml
+    secrets: 
+      gh_token: ${{ secrets.github_token }}
+    with:
+      repo: ${{ github.repository }}
+      event_name: ${{ github.event_name }}
+      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.issue.number }}
+      append_content: |
+        # RAVA actions result
 
-          > log: [$log_dir]($log_dir)
-          
-          $lava_result_summary
-
-          EEE
-          cat summary > $GITHUB_STEP_SUMMARY
-          if [ "$ISSUE_ID" != "" ]; then
-            gh issue comment "$ISSUE_ID" -b "$(cat summary)" -R "$GH_REPO"
-          fi
+        ${{ needs.run-lava-check.outputs.summary_content }}

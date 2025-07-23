@@ -37,9 +37,9 @@ on:
       lava_template:
         description: lava测试模板
         value: ${{ jobs.parse-request.outputs.lava_template }}
-      testcase_url:
+      testcase_path:
         description: lava 需要执行的用例yaml 文件路径
-        value: ${{ jobs.parse-request.outputs.testcase_url }}
+        value: ${{ jobs.parse-request.outputs.testcase_path }}
 
    
 jobs:
@@ -53,7 +53,7 @@ jobs:
       NEED_RUN_JOB: ${{ steps.parse-request.outputs.NEED_RUN_JOB }}
       testcase_repo: ${{ steps.parse-request.outputs.testcase_repo }}
       lava_template: ${{ steps.parse-request.outputs.lava_template }}
-      testcase_url: ${{ steps.parse-request.outputs.testcase_url }}
+      testcase_path: ${{ steps.parse-request.outputs.testcase_path }}
     env:
       GH_TOKEN: ${{ github.token }}
       x_github_event: ${{ inputs.x_github_event }}
@@ -100,13 +100,13 @@ jobs:
                       str(i).split('=',maxsplit=1)
                   for i in shlex.split(comment.strip()[6:])]
               }
-              for k in ['lava_template','testcase_url', 'fetch', 'job']:
+              for k in ['lava_template','testcase_path', 'fetch', 'job']:
                   if k in data:
                       res[k] = data.pop(k)
               res["testcase_params"] = "\n".join([f"{k}={v}" for k, v in data.items()])
 
               # 检查文件是否存在
-              for k in ['lava_template','testcase_url',]:
+              for k in ['lava_template','testcase_path',]:
                   if k in res and os.system(f'gh api repos/RVCK-Project/lavaci/contents/{res[k]}'):
                       raise Exception(f"{k}={res[k]} not found in RVCK-Project/lavaci")
 
@@ -219,7 +219,7 @@ jobs:
           echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_OUTPUT
           echo "testcase_repo=$(cat testcase_repo || echo 'RVCK-Project/lavaci')" >> $GITHUB_OUTPUT
           echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_OUTPUT
-          echo "testcase_url=$(cat testcase_url || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_OUTPUT
+          echo "testcase_path=$(cat testcase_path || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_OUTPUT
 
           echo "REPO=$(cat REPO)" >> $GITHUB_ENV
           echo "FETCH_REF=$(cat FETCH_REF)" >> $GITHUB_ENV
@@ -228,6 +228,6 @@ jobs:
           echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_ENV
           echo "testcase_repo=$(cat testcase_repo || echo 'https://github.com/RVCK-Project/lavaci.git')" >> $GITHUB_ENV
           echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_ENV
-          echo "testcase_url=$(cat testcase_url || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_ENV
+          echo "testcase_path=$(cat testcase_path || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_ENV
           
 

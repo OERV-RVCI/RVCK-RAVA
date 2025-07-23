@@ -8,6 +8,38 @@ jobs:
     uses: ./.github/workflows/parse-rvck.yml
     secrets: inherit
   
+    
+  pre-check:
+    needs: [parse-request]
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.parse-request.outputs.REPO }}
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/update-status.yml
+    secrets: 
+      gh_token: ${{ secrets.github_token }}
+    with:
+      repo: ${{ github.repository }}
+      event_name: ${{ github.event_name }}
+      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.issue.number }}
+      append_content: |
+        
+        ---
+
+        **开始测试 log: [${{github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}](${{github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})**
+
+          |args|value|
+          |:-:|:-:|
+          | repository | ${{ github.repository }} |
+          | head ref | ${{ needs.parse-request.outputs.FETCH_REF }} |
+          | base ref | ${{ needs.parse-request.outputs.SRC_REF }} |
+          |LAVA repo | ${{ needs.parse-request.outputs.testcase_repo }} |
+          |LAVA Template | ${{ needs.parse-request.outputs.lava_template }} |
+          |Testcase path | ${{ needs.parse-request.outputs.testcase_path }} |
+
+        ---
+
+
   kunit-test:
     needs: [parse-request]
     uses: ./.github/workflows/kunit-test.yml
@@ -34,7 +66,7 @@ jobs:
     with:
       testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
-      testcase_url: ${{ needs.parse-request.outputs.testcase_url }}
+      testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_download_url: ${{ needs.kernel-build.outputs.kernel_download_url }}
 
   check-patch:
@@ -51,19 +83,32 @@ jobs:
   collect-result:
     if: ${{ !cancelled() }}
     needs: [parse-request, kunit-test, kernel-build, lava-trigger, check-patch]
-    uses: ./.github/workflows/collect-result.yml
     permissions:
       issues: write
       pull-requests: write
+    uses: ./.github/workflows/update-status.yml
+    secrets: 
+      gh_token: ${{ secrets.github_token }}
     with:
-      repo: ${{ needs.parse-request.outputs.REPO }}
-      issue_id: ${{ needs.parse-request.outputs.ISSUE_ID }}
-      kunit-test_result: ${{ needs.kunit-test.result }}
-      kernel-build_result: ${{ needs.kernel-build.result }}
-      lava-trigger_result: ${{ needs.lava-trigger.result }}
-      check-patch_result: ${{ needs.check-patch.result }}
-      kunit-test_info: ${{ needs.kunit-test.outputs.summary_content }}
-      kernel-build_info: ${{ needs.kernel-build.outputs.summary_content }}
-      lava-trigger_info: ${{ needs.lava-trigger.outputs.summary_content }}
-      check-patch_info: ${{ needs.check-patch.outputs.summary_content }}
+      repo: ${{ github.repository }}
+      event_name: ${{ github.event_name }}
+      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.issue.number }}
+      append_content: |
+        
+        # RVCK result
 
+        | check | result |
+        | :-: | :-: |
+        |kunit-test| ${{ needs.kunit-test.result }} |
+        |kernel-build| ${{ needs.kernel-build.result }} |
+        |lava-trigger| ${{ needs.lava-trigger.result }} |
+        |check-patch| ${{ needs.check-patch.result }} |
+        
+        ${{ needs.kunit-test.outputs.summary_content }}
+        
+        ${{ needs.kernel-build.outputs.summary_content }}
+
+        ${{ needs.lava-trigger.outputs.summary_content }}
+        
+        ${{ needs.check-patch.outputs.summary_content }}
+    
