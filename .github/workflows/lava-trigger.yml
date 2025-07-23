@@ -16,7 +16,6 @@ on:
         description: 'rootfs下载链接'
         required: false
         type: string
-        default: "https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.zst"
 
       testcase_repo:
         description: 'lava 仓库地址, {owner}/{repo}'
@@ -63,6 +62,7 @@ jobs:
     outputs:
       lava_jobid: ${{ steps.run_lava_check.outputs.lava_jobid }}
       testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
+      rootfs_download_url: ${{ steps.gen_var.outputs.rootfs_download_url }}
     runs-on: 'ubuntu-latest'
 
     steps:
@@ -82,11 +82,22 @@ jobs:
           github_repo: ${{ github.repository }}
           event_name: ${{ github.event_name }}
           issue_id: ${{ github.event.pull_request.number || github.event.issue_comment.number || github.event.issue.number }}
+          input_rootfs_download_url: ${{ inputs.rootfs_download_url }}
         run: |
           echo "ssh_port=$(od -An -N2 -i /dev/urandom | awk -v min=10000 -v max=20000 '{print min + ($1 % (max - min + 1))}')" >> $GITHUB_OUTPUT
           qemu_job_name="${github_repo/\//_}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}"
           echo "qemu_job_name=$qemu_job_name" >> $GITHUB_OUTPUT
-          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_$(yq -r .device_type "$lava_template")" >> $GITHUB_OUTPUT
+          device_type="$(yq -r .device_type "$lava_template")"
+          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_${device_type}" >> $GITHUB_OUTPUT
+          rootfs_download_url="${input_rootfs_download_url}"
+          if [ -z "$rootfs_download_url" ]; then
+            if [ "$device_type" = qemu ]; then
+              rootfs_download_url="https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.zst"
+            else
+              rootfs_download_url="https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.tar.gz"
+            fi
+          fi
+          echo "rootfs_download_url=$rootfs_download_url" >> $GITHUB_OUTPUT
 
       - name: setup_lava_template
         shell: python3 {0}
@@ -94,6 +105,7 @@ jobs:
           ssh_port: ${{ steps.gen_var.outputs.ssh_port }}
           qemu_job_name: ${{ steps.gen_var.outputs.qemu_job_name }}
           testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
+          rootfs_download_url: ${{ steps.gen_var.outputs.rootfs_download_url }}
         run: |
           import yaml
           import os
@@ -233,6 +245,7 @@ jobs:
     env: 
       lava_jobid: ${{ needs.lava-trigger.outputs.lava_jobid }}
       testitem_name: ${{ needs.lava-trigger.outputs.testitem_name }}
+      rootfs_download_url: ${{ needs.lava-trigger.outputs.rootfs_download_url }}
     steps:
       - name: install depends
         run: |
