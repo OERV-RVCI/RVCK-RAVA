@@ -143,7 +143,8 @@ jobs:
 
           data =  parse_yaml(lava_template)
           data["job_name"] = qemu_job_name
-          data['context']['extra_options'] = [i.replace('hostfwd=tcp::10001-:22', f'hostfwd=tcp::{ssh_port}-:22') for i in list(data['context']['extra_options'])]
+          if data['device_type'] == 'qemu' and 'context' in data and 'extra_options' in data['context']:
+              data['context']['extra_options'] = [i.replace('hostfwd=tcp::10001-:22', f'hostfwd=tcp::{ssh_port}-:22') for i in list(data['context']['extra_options'])]
           data['actions'][0]['deploy']['images']['kernel']['url'] = kernel_download_url
           data['actions'][0]['deploy']['images']['rootfs']['url'] = rootfs_download_url
           data['actions'][2]['test']['definitions'][0]['repository'] = f"https://github.com/{testcase_repo}.git"
