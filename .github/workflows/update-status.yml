@@ -41,7 +41,12 @@ jobs:
           |repo| $GH_REPO |
           |event name |$event_name |
           |event id |$event_id |
-          |append_content | "\`$(echo "${append_content}" | tr '\n' '\\')\`" |
+
+          append_content:
+          \`\`\`markdown
+          ${append_content}
+          \`\`\`
+
           EEE
    
       - name: append-content

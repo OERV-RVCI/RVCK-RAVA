@@ -136,21 +136,23 @@ jobs:
           rootfs_download_url = os.getenv("rootfs_download_url")
           assert rootfs_download_url, "Rootfs download URL is not set"
 
-          def parse_yaml(file_path):
-              with open(file_path, "r") as file:
-                  content = file.read()
-                  return yaml.safe_load(content)
+          content = open(lava_template, "r").read()\
+                    .replace("${job_name}", qemu_job_name)\
+                    .replace("${kernel_image_url}", kernel_download_url)\
+                    .replace("${rootfs_image_url}", rootfs_download_url)\
+                    .replace("${testcase_repo}", f"https://github.com/{testcase_repo}.git")\
+                    .replace("${testitem_name}", testitem_name)\
+                    .replace("${testcase_path}", testcase_path)
 
-          data =  parse_yaml(lava_template)
-          data["job_name"] = qemu_job_name
-          data['context']['extra_options'] = [i.replace('hostfwd=tcp::10001-:22', f'hostfwd=tcp::{ssh_port}-:22') for i in list(data['context']['extra_options'])]
-          data['actions'][0]['deploy']['images']['kernel']['url'] = kernel_download_url
-          data['actions'][0]['deploy']['images']['rootfs']['url'] = rootfs_download_url
-          data['actions'][2]['test']['definitions'][0]['repository'] = f"https://github.com/{testcase_repo}.git"
+          data = yaml.safe_load(content)
+
+          # qemu 需要设置ssh port
+          if data['device_type'] == 'qemu' and 'context' in data and 'extra_options' in data['context']:
+              data['context']['extra_options'] = [i.replace('hostfwd=tcp::10001-:22', f'hostfwd=tcp::{ssh_port}-:22') for i in list(data['context']['extra_options'])]
+
           if len(testcase_ref):
               data['actions'][2]['test']['definitions'][0]['revision'] = testcase_ref
-          data['actions'][2]['test']['definitions'][0]['name'] = testitem_name
-          data['actions'][2]['test']['definitions'][0]['path'] = testcase_path
+
           data['actions'][2]['test']['definitions'][0].pop('parameters', None)
 
           with open(lava_template, 'w') as f:
@@ -238,10 +240,10 @@ jobs:
 
   collect-summary:
     outputs:
-      summary_content: ${{ steps.summary.outputs.summary_content }}
+      summary_content: ${{ steps.summary.outputs.summary_content || steps.onfailure.outputs.summary_content }}
     runs-on: 'ubuntu-latest'
     needs: [lava-trigger, lava-result]
-    if: ${{ needs.lava-trigger.outputs.lava_jobid && !cancelled() }}
+    if: ${{ !cancelled() }}
     env: 
       lava_jobid: ${{ needs.lava-trigger.outputs.lava_jobid }}
       testitem_name: ${{ needs.lava-trigger.outputs.testitem_name }}
@@ -252,7 +254,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install lavacli
 
+      - id: onfailure
+        if: ${{ !needs.lava-trigger.outputs.lava_jobid }}
+        run: |
+          cat > summary_content <<EEE
+          ## LAVA Check
+
+          ---
+          ***lava 执行失败.***
+          ---
+          EEE
+          echo "summary_content<<EOF" >> $GITHUB_OUTPUT
+          cat summary_content >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+
       - id: summary
+        if: ${{ needs.lava-trigger.outputs.lava_jobid }}
         shell: bash
         run: |
           set -x
