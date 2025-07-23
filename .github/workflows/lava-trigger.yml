@@ -136,7 +136,7 @@ jobs:
           rootfs_download_url = os.getenv("rootfs_download_url")
           assert rootfs_download_url, "Rootfs download URL is not set"
 
-          content = open(file_path, "r").read()\
+          content = open(lava_template, "r").read()\
                     .replace("${job_name}", qemu_job_name)\
                     .replace("${kernel_image_url}", kernel_download_url)\
                     .replace("${rootfs_image_url}", rootfs_download_url)\
