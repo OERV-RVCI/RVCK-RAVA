@@ -95,6 +95,8 @@ jobs:
               if [ "$f" = "" ] || [ "$msgtype" = "" ]; then continue; fi
               file_cnt=$((file_cnt + 1))
               k="${msgtype%:}"
+              k="${k%]}"
+              k="${k#[}"
               msg_cnt["${k}"]=$(( "${msg_cnt["${k}"]:-0}" + 1 ))
               all_msg_type["${k}"]=$((${all_msg_type["${k}"]:-0} + 1))
             done < parse_result
