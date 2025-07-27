@@ -75,10 +75,8 @@ jobs:
 
           echo "$GITHUB_STEP_SUMMARY"
 
-          while read -r f msgtype info; do
-            message_files["${f:*:*:}"]=$(( ${message_files["${f:*:*:}"]:-0} + 1 ))
-            message_type["${f:}"]=$(( "${message_type["${f:}"]:-0}" + 1 ))
-          done < <(while read -r l; do
+          while read -r l; do
+            if [ ! -d "$l" ] && [ ! -f "$l" ]; then continue; fi
             case "$check_type" in
               shellcheck)
                 "$check_type" "$l"/**/*.sh -f gcc 
@@ -87,8 +85,13 @@ jobs:
                 "$check_type" -f parsable "$l"
                 ;;
               esac
-            done <<< "$checkpath"
-          )
+          done  <<< "$checkpath" > parsable_result
+          
+          while read -r f msgtype info; do
+            message_files["${f:*:*:}"]=$(( ${message_files["${f:*:*:}"]:-0} + 1 ))
+            message_type["${f:}"]=$(( "${message_type["${f:}"]:-0}" + 1 ))
+          done < parsable_result
+        
         
           cat > summary << EEE
           ### $check_type result
