@@ -16,10 +16,9 @@ on:
         default: '.'
         description: '要检查的目录或文件, 每行一个'
     outputs:
-      shellcheck_result: 
-        value: ${{ jobs.code-lint.outputs.shellcheck_result }}
-      yamllint_result:
-        value: ${{ jobs.code-lint.outputs.yamllint_result }}
+      summary_content: 
+        value: ${{ jobs.collect-info.outputs.summary }}
+
   
 jobs:
   code-lint:
@@ -143,7 +142,29 @@ jobs:
           done <<< "$check_path"
           echo '```'
           } >> $GITHUB_STEP_SUMMARY
-          
+
+  collect-info:
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    needs: [code-lint]
+    runs-on: 'ubuntu-latest'
+    steps:
+      - id: summary
+        run: |
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          cat >> $GITHUB_OUTPUT << EEE
+
+          ## Code lint and check Result
+
+          ${{ needs.code-lint.outputs.shellcheck_result }}
+
+          ${{ needs.code-lint.outputs.yamllint_result }}
+
+          EEE
+
+          echo "EOF" >> $GITHUB_OUTPUT
+
+
 
 
   
