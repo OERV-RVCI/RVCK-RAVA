@@ -84,7 +84,7 @@ jobs:
                 "$check_type" "$l"/**/*.sh -f gcc 
                 ;;
               yamllint)
-                "$check_type" -f parseable "$l"
+                "$check_type" -f parsable "$l"
                 ;;
               esac
             done <<< "$checkpath"
