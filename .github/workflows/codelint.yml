@@ -1,0 +1,111 @@
+name: shell and yaml lint check
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: '检查的代码仓库来源'
+      ref: 
+        type: string
+        required: true
+        description: '拉取分支'
+      check_path:
+        type: string
+        default: '.'
+        description: '要检查的目录或文件, 每行一个'
+    outputs:
+      shellcheck_result: 
+        value: ${{ jobs.code-lint.outputs.shellcheck_result }}
+      yamllint_result:
+        value: ${{ jobs.code-lint.outputs.yamllint_result }}
+  
+jobs:
+  code-lint:
+    outputs:
+      shellcheck_result: ${{ steps.check.outputs.shellcheck_result }}
+      yamllint_result: ${{ steps.check.outputs.yamllint_result }}
+    runs-on: 'ubuntu-latest'
+    strategy:
+      matrix:
+        check_type: [shellcheck, yamllint]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
+
+      - name: install depends
+        run: |
+          sudo apt-get update
+          if [ "${{ matrix.check_type }}" = "shellcheck" ]; then
+            sudo apt-get install shellcheck
+          elif [ "${{ matrix.check_type }}" = yamllint ]; then
+            sudo apt-get install python3-pip
+            sudo pip3 install yamllint
+            yamllint -h
+          fi
+
+      - name: ${{ matrix.check_type }}
+        id: check
+        shell: bash
+        env:
+          check_path: ${{ inputs.check_path }}
+          check_type:  ${{ matrix.check_type }}
+        run: |
+      
+          declare -A message_files=()
+          declare -A message_type=()
+          check_path="$check_path
+          "
+          while read -r l; do
+            if [ ! -d "$l" ] && [ ! -f "$l" ]; then continue; fi
+            echo "check $l"
+
+            case "$check_type" in
+              shellcheck)
+                "$check_type" "$l"/**/*.sh
+                ;;
+              yamllint)
+                "$check_type" "$l"
+                ;;
+            esac
+          done <<< "$checkpath" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "$GITHUB_STEP_SUMMARY"
+
+          while read -r f msgtype info; do
+            message_files["${f:*:*:}"]=$(( ${message_files["${f:*:*:}"]:-0} + 1 ))
+            message_type["${f:}"]=$(( "${message_type["${f:}"]:-0}" + 1 ))
+          done < <(while read -r l; do
+            case "$check_type" in
+              shellcheck)
+                "$check_type" "$l"/**/*.sh -f gcc 
+                ;;
+              yamllint)
+                "$check_type" -f parseable "$l"
+                ;;
+              esac
+            done <<< "$checkpath"
+          )
+        
+          cat > summary << EEE
+          ### $check_type result
+
+          ***$check_type $(for k in "${!message_type[@]}"; do echo -n "$k: ${message_type[$k]}"; done) in ${#message_files[@]} files.***
+
+          | file | message count |
+          |:-|:-:|
+          $(for f in "${!message_files[@]}"; do echo "| $f | ${message_files[$f]} |"); done
+
+          EEE
+
+          cat summary >> $GITHUB_STEP_SUMMARY
+          
+          echo "${check_type}_result<<EOF" >> $GITHUB_OUTPUT
+          cat summary >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+
+  
