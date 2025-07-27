@@ -57,10 +57,10 @@ jobs:
       
           declare -A message_files=()
           declare -A message_type=()
-          check_path="$check_path
-          "
+          check_path="$check_path"
           while read -r l; do
             if [ ! -d "$l" ] && [ ! -f "$l" ]; then continue; fi
+            {
             echo "check $l"
 
             case "$check_type" in
@@ -71,7 +71,8 @@ jobs:
                 "$check_type" "$l"
                 ;;
             esac
-          done <<< "$checkpath" >> "$GITHUB_STEP_SUMMARY"
+            } >> "$GITHUB_STEP_SUMMARY"
+          done <<< "$checkpath" 
 
           echo "$GITHUB_STEP_SUMMARY"
 
@@ -91,8 +92,7 @@ jobs:
             message_files["${f:*:*:}"]=$(( ${message_files["${f:*:*:}"]:-0} + 1 ))
             message_type["${f:}"]=$(( "${message_type["${f:}"]:-0}" + 1 ))
           done < parsable_result
-        
-        
+
           cat > summary << EEE
           ### $check_type result
 
@@ -100,7 +100,7 @@ jobs:
 
           | file | message count |
           |:-|:-:|
-          $(for f in "${!message_files[@]}"; do echo "| $f | ${message_files[$f]} |"); done
+          $(for f in "${!message_files[@]}"; do echo "| $f | ${message_files[$f]} |"; done)
 
           EEE
 
