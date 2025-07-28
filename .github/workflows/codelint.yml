@@ -65,7 +65,11 @@ jobs:
             if [ ! -d "$l" ] && [ ! -f "$l" ]; then continue; fi
             case "$check_type" in
               shellcheck)
-                find "$l" -type f -name "*.sh"
+                if [ -d "$l" ]; then
+                  find "$l" -type f -name "*.sh"
+                elif [ -f "${l##*.}" = sh ]; then
+                  echo "$l"
+                fi
                 ;;
               yamllint)
                 "$check_type" --list-files "$l"
