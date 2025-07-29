@@ -113,12 +113,7 @@ jobs:
           cat info_result
 
           cat > summary << EEE
-          ### $check_type result
-          
-          check_path:
-          
-          $(while read -r l; do [ "$l" != "" ] && echo "- $l"; done <<< "$check_path")
-          
+         
           ***$check_type $(for k in "${!all_msg_type[@]}"; do echo -n "$k: ${all_msg_type[$k]}, "; done) in ${file_cnt} files.***
 
           | file | message count |
@@ -126,6 +121,7 @@ jobs:
           $(cat info_result)
           
           EEE
+
           echo "${check_type}_result<<EOF" >> $GITHUB_OUTPUT
           cat summary >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -161,6 +157,10 @@ jobs:
           cat >> $GITHUB_OUTPUT << EEE
 
           ## Code lint and check Result
+
+          check_path:
+          
+          $(while read -r l; do [ "$l" != "" ] && echo "- $l"; done <<< "$check_path")
 
           ${{ needs.code-lint.outputs.shellcheck_result }}
 
