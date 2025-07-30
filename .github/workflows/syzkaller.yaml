@@ -1,0 +1,123 @@
+name: syzkaller
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+      rootfs_download_url:
+        type: string
+        default: "https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.zst"
+      
+jobs:
+  syzkaller:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
+          path: kernel_src
+
+
+      - name: init env
+        run: |
+          sudo apt-get update
+          # install dependencies 
+          sudo apt-get install -y git golang make flex bison bc libelf-dev dwarves qemu-system-misc build-essential gcc-riscv64-linux-gnu g++-riscv64-linux-gnu rpm libssl-dev tree zstd
+      
+      - run: |
+          touch evnironment.temp
+
+          pushd kernel_src
+          # config for KASAN and UBSAN
+          cat <<EOF | tee arch/riscv/configs/syzkaller_defconfig
+          CONFIG_KASAN=y
+          CONFIG_KASAN_INLINE=y
+          # CONFIG_UBSAN=y
+          # CONFIG_UBSAN_INLINE=y
+          CONFIG_KCOV=y
+          CONFIG_KCOV_ENABLE_COMPARISONS=y
+          CONFIG_KCOV_INSTRUMENT_ALL=y
+          CONFIG_DEBUG_INFO=y
+          CONFIG_DEBUG_FS=y
+          EOF
+
+          # build
+          export RISCV=/opt/riscv/
+          export RISCV1=/opt/riscv1/
+          export PATH=$PATH:$RISCV/bin:$RISCV1/bin
+          export CROSS_COMPILE=riscv64-unknown-linux-gnu-
+          ARCH=riscv scripts/kconfig/merge_config.sh arch/riscv/configs/openeuler_defconfig arch/riscv/configs/syzkaller_defconfig
+          make ARCH=riscv -j$(nproc)
+          popd
+
+          KERNEL_IMAGE=$(pwd)/kernel/arch/riscv/boot/Image
+          KERNEL_OBJ=$(pwd)/kernel
+          WORK_DIR=$(pwd)/syzkaller-work
+          SSH_KEY=$HOME/.ssh/id_rsa
+          ROOTFS_IMAGE=$HOME/workspaces/kernelci_inlinepath/rootfs-all-sp1.img
+          SYZKALLER_SOURCE=$(pwd)/syzkaller
+          [ ! -d $WORK_DIR ] && mkdir -p $WORK_DIR
+          echo KERNEL_IMAGE:$KERNEL_IMAGE
+          echo KERNEL_OBJ:$KERNEL_OBJ
+          echo WORK_DIR:$WORK_DIR
+          echo SSH_KEY:$SSH_KEY
+          echo ROOTFS_IMAGE:$ROOTFS_IMAGE
+          echo SYZKALLER_SOURCE:$SYZKALLER_SOURCE
+
+          # build syzkaller
+          git clone --depth=1 https://github.com/google/syzkaller.git
+          
+          pushd syzkaller
+          cat <<EOF | tee riscv-rootfs-rw.patch
+          diff --git a/vm/qemu/qemu.go b/vm/qemu/qemu.go
+          index 398eb8047..f6b2d56ab 100644
+          --- a/vm/qemu/qemu.go
+          +++ b/vm/qemu/qemu.go
+          @@ -195,6 +195,7 @@ var archConfigs = map[string]*archConfig{
+              UseNewQemuImageOptions: true,
+              CmdLine: []string{
+                "root=/dev/vda",
+          +			"rw",
+                "console=ttyS0",
+              },
+            },
+
+          EOF
+          git apply --reject --ignore-whitespace riscv-rootfs-rw.patch
+          make CC=riscv64-linux-gnu-g++ TARGETARCH=riscv64
+
+          # run syzkaller
+          pushd bin
+          ls -la
+          cat <<EOF | tee config.cfg
+          {
+            "target": "linux/riscv64",
+            "http": "127.0.0.1:9090",
+            "workdir": "$WORK_DIR",
+            "kernel_obj": "$KERNEL_OBJ",
+            "image": "$ROOTFS_IMAGE",
+            "sshkey": "$SSH_KEY",
+            "syzkaller": "$SYZKALLER_SOURCE",
+            "procs": 8,
+            "type": "qemu",
+            "vm": {
+              "qemu": "qemu-system-riscv64",
+              "kernel": "$KERNEL_IMAGE",
+              "count": 4,
+              "cpu": 8,
+              "mem": 8192,
+              "qemu_args": "-nographic -machine virt -bios default",
+              "cmdline": "rdinit=/sbin/init earlyprintk=serial stdio oops=panic nmi_watchdog=panic panic_on_warn=1 selinux=0 panic=8_dump_on_oops=orig_cpu rodata=n vsyscall=native net.ifnames=0 biosdevname=0"
+            }
+          }
+          EOF
+          cat config.cfg
+          ./syz-manager --config=config.cfg
+          popd
+          popd
