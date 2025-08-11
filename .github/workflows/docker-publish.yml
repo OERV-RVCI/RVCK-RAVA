@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: hub.oepkgs.net
-  IMAGE_NAME: oerv-ci/rava-action-runner
+  IMAGE_NAME: oerv-ci/action-runner
 
 jobs:
   build:

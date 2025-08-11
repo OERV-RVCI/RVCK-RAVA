@@ -34,7 +34,7 @@ jobs:
     runs-on:
       group: kernel_build-runner
     container:
-      image: 'hub.oepkgs.net/oerv-ci/rava-action-runner:latest'
+      image: 'hub.oepkgs.net/oerv-ci/action-runner:latest'
       
     outputs:
       kernel_download_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}

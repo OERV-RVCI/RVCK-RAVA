@@ -15,7 +15,10 @@ on:
       
 jobs:
   syzkaller:
-    runs-on: 'ubuntu-latest'
+    runs-on:
+      group: kernel_build-runner
+    container:
+      image: 'hub.oepkgs.net/oerv-ci/action-runner:latest'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,16 +26,8 @@ jobs:
           ref: ${{ inputs.ref }}
           path: kernel_src
 
-
-      - name: init env
+      - name: kernel-build
         run: |
-          sudo apt-get update
-          # install dependencies 
-          sudo apt-get install -y git golang make flex bison bc libelf-dev dwarves qemu-system-misc build-essential gcc-riscv64-linux-gnu g++-riscv64-linux-gnu rpm libssl-dev tree zstd
-      
-      - run: |
-          touch evnironment.temp
-
           pushd kernel_src
           # config for KASAN and UBSAN
           cat <<EOF | tee arch/riscv/configs/syzkaller_defconfig
@@ -56,6 +51,8 @@ jobs:
           make ARCH=riscv -j$(nproc)
           popd
 
+      - name: build-syzkaller
+        run: | 
           KERNEL_IMAGE=$(pwd)/kernel/arch/riscv/boot/Image
           KERNEL_OBJ=$(pwd)/kernel
           WORK_DIR=$(pwd)/syzkaller-work
@@ -91,9 +88,12 @@ jobs:
           EOF
           git apply --reject --ignore-whitespace riscv-rootfs-rw.patch
           make CC=riscv64-linux-gnu-g++ TARGETARCH=riscv64
-
-          # run syzkaller
-          pushd bin
+          
+          popd
+      
+      - name: run-syzkaller
+        run: |
+          cd syzkaller/bin/
           ls -la
           cat <<EOF | tee config.cfg
           {
@@ -118,6 +118,4 @@ jobs:
           }
           EOF
           cat config.cfg
-          ./syz-manager --config=config.cfg
-          popd
-          popd
+          # ./syz-manager --config=config.cfg
