@@ -15,6 +15,7 @@ jobs:
       testcase_repo: ${{ steps.parse.outputs.testcase_repo }}
       testcase_ref: ${{ steps.parse.outputs.testcase_ref }}
       summary: ${{ steps.parse.outputs.summary || steps.onfailure.outputs.summary }}
+      codelint_check_path: ${{ steps.parse.outputs.codelint_check_path }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
@@ -71,6 +72,12 @@ jobs:
           echo "lava_testcase_path=$lava_testcase_path" >> $GITHUB_OUTPUT
           echo "testcase_repo=${testcase_repo}" >> $GITHUB_OUTPUT
           echo "testcase_ref=${testcase_ref}" >> $GITHUB_OUTPUT
+          
+          echo "codelint_check_path<<EOF" >> $GITHUB_OUTPUT
+          echo "${lava_template}" >> $GITHUB_OUTPUT
+          dirname "${lava_testcase_path}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
           log_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           cat > summary << EOF
           ---
@@ -117,7 +124,7 @@ jobs:
     with:
       repo: ${{ github.repository }}
       event_name: ${{ github.event_name }}
-      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.issue.number }}
+      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.number || github.event.issue.number }}
       append_content: ${{ needs.parse-request.outputs.summary }}
 
   
@@ -134,8 +141,17 @@ jobs:
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
       testcase_path: ${{ needs.parse-request.outputs.lava_testcase_path }}
   
+  run-codelint:
+    needs: [parse-request]
+    if: ${{ needs.parse-request.outputs.codelint_check_path }}
+    uses: ./.github/workflows/codelint.yml
+    with:
+      repo: ${{ needs.parse-request.outputs.testcase_repo }}
+      ref: ${{ needs.parse-request.outputs.testcase_ref || 'main' }}
+      check_path: ${{ needs.parse-request.outputs.codelint_check_path }}
+  
   collect-result:
-    needs: [run-lava-check]
+    needs: [run-lava-check, run-codelint]
     if: ${{ !cancelled() }}
     permissions:
       issues: write
@@ -146,8 +162,11 @@ jobs:
     with:
       repo: ${{ github.repository }}
       event_name: ${{ github.event_name }}
-      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.issue.number }}
+      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.number || github.event.issue.number }}
       append_content: |
         # RAVA actions result
 
         ${{ needs.run-lava-check.outputs.summary_content }}
+        
+        ${{ needs.run-codelint.outputs.summary_content }}
+  
