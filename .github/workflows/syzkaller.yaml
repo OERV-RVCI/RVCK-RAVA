@@ -70,6 +70,7 @@ jobs:
           echo SYZKALLER_SOURCE:$SYZKALLER_SOURCE
 
           # build syzkaller
+          rm -rf syzkaller || true
           git clone --depth=1 https://github.com/google/syzkaller.git
           
           cd syzkaller
