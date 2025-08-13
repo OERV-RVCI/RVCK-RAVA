@@ -46,7 +46,7 @@ jobs:
           export RISCV=/opt/riscv/
           export RISCV1=/opt/riscv1/
           export PATH=$PATH:$RISCV/bin:$RISCV1/bin
-          export CROSS_COMPILE=riscv64-unknown-linux-gnu-
+          export CROSS_COMPILE=riscv64-linux-gnu-
           ARCH=riscv scripts/kconfig/merge_config.sh arch/riscv/configs/openeuler_defconfig arch/riscv/configs/syzkaller_defconfig
           make ARCH=riscv -j$(nproc)
           
