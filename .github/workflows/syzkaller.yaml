@@ -51,13 +51,15 @@ jobs:
           make ARCH=riscv -j$(nproc)
           
 
-      - name: build-syzkaller
-        run: | 
+      - name: run-syzkaller
+        run: |
+          rm -rf rootfs.img || true
+          wget -O rootfs.img "${{ inputs.rootfs_download_url }}"
           KERNEL_IMAGE=$(pwd)/kernel/arch/riscv/boot/Image
           KERNEL_OBJ=$(pwd)/kernel
           WORK_DIR=$(pwd)/syzkaller-work
           SSH_KEY=$HOME/.ssh/id_rsa
-          ROOTFS_IMAGE=$HOME/workspaces/kernelci_inlinepath/rootfs-all-sp1.img
+          ROOTFS_IMAGE=$(pwd)/rootfs.img
           SYZKALLER_SOURCE=$(pwd)/syzkaller
           [ ! -d $WORK_DIR ] && mkdir -p $WORK_DIR
           echo KERNEL_IMAGE:$KERNEL_IMAGE
@@ -71,28 +73,9 @@ jobs:
           git clone --depth=1 https://github.com/google/syzkaller.git
           
           cd syzkaller
-          cat <<EOF | tee riscv-rootfs-rw.patch
-          diff --git a/vm/qemu/qemu.go b/vm/qemu/qemu.go
-          index 398eb8047..f6b2d56ab 100644
-          --- a/vm/qemu/qemu.go
-          +++ b/vm/qemu/qemu.go
-          @@ -195,6 +195,7 @@ var archConfigs = map[string]*archConfig{
-              UseNewQemuImageOptions: true,
-              CmdLine: []string{
-                "root=/dev/vda",
-          +			"rw",
-                "console=ttyS0",
-              },
-            },
-
-          EOF
-          git apply --reject --ignore-whitespace riscv-rootfs-rw.patch
           make CC=riscv64-linux-gnu-g++ TARGETARCH=riscv64
 
-      
-      - name: run-syzkaller
-        run: |
-          cd syzkaller/bin/
+          cd bin/
           ls -la
           cat <<EOF | tee config.cfg
           {
