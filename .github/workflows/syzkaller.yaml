@@ -28,7 +28,7 @@ jobs:
 
       - name: kernel-build
         run: |
-          pushd kernel_src
+          cd kernel_src
           # config for KASAN and UBSAN
           cat <<EOF | tee arch/riscv/configs/syzkaller_defconfig
           CONFIG_KASAN=y
@@ -49,7 +49,7 @@ jobs:
           export CROSS_COMPILE=riscv64-unknown-linux-gnu-
           ARCH=riscv scripts/kconfig/merge_config.sh arch/riscv/configs/openeuler_defconfig arch/riscv/configs/syzkaller_defconfig
           make ARCH=riscv -j$(nproc)
-          popd
+          
 
       - name: build-syzkaller
         run: | 
@@ -70,7 +70,7 @@ jobs:
           # build syzkaller
           git clone --depth=1 https://github.com/google/syzkaller.git
           
-          pushd syzkaller
+          cd syzkaller
           cat <<EOF | tee riscv-rootfs-rw.patch
           diff --git a/vm/qemu/qemu.go b/vm/qemu/qemu.go
           index 398eb8047..f6b2d56ab 100644
@@ -88,8 +88,7 @@ jobs:
           EOF
           git apply --reject --ignore-whitespace riscv-rootfs-rw.patch
           make CC=riscv64-linux-gnu-g++ TARGETARCH=riscv64
-          
-          popd
+
       
       - name: run-syzkaller
         run: |
