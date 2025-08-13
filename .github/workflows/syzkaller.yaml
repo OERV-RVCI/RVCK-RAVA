@@ -54,7 +54,7 @@ jobs:
       - name: run-syzkaller
         run: |
           rm -rf rootfs.img || true
-          wget -O rootfs.img "${{ inputs.rootfs_download_url }}"
+          wget -qO rootfs.img "${{ inputs.rootfs_download_url }}"
           KERNEL_IMAGE=$(pwd)/kernel/arch/riscv/boot/Image
           KERNEL_OBJ=$(pwd)/kernel
           WORK_DIR=$(pwd)/syzkaller-work
