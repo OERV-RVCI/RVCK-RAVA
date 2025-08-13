@@ -92,9 +92,9 @@ jobs:
           rootfs_download_url="${input_rootfs_download_url}"
           if [ -z "$rootfs_download_url" ]; then
             if [ "$device_type" = qemu ]; then
-              rootfs_download_url="https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.zst"
+              rootfs_download_url="https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.img.zst"
             else
-              rootfs_download_url="https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.tar.gz"
+              rootfs_download_url="https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.tar.gz"
             fi
           fi
           echo "rootfs_download_url=$rootfs_download_url" >> $GITHUB_OUTPUT
