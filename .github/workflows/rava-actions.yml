@@ -82,7 +82,8 @@ jobs:
           cat > summary << EOF
           ---
           **开始检查, log: [$log_url]($log_url)**
-          
+          <details>
+          <summary>参数解析结果</summary>
           |args|value|
           |:-:|:-:|
           |repository | $GH_REPO |
@@ -90,6 +91,7 @@ jobs:
           |Testcase path | $lava_testcase_path |
           |Testcase repo | $testcase_repo |
           |Testcase ref | $testcase_ref |
+          </details>
           ---
           EOF
 
@@ -164,9 +166,13 @@ jobs:
       event_name: ${{ github.event_name }}
       event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.number || github.event.issue.number }}
       append_content: |
+        <details>
+        <summary>RAVA actions 测试结果</summary>
+        
         # RAVA actions result
 
         ${{ needs.run-lava-check.outputs.summary_content }}
         
         ${{ needs.run-codelint.outputs.summary_content }}
+        </details>
   

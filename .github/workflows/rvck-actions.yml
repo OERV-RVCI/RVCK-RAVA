@@ -27,16 +27,19 @@ jobs:
         ---
 
         **开始测试 log: [${{github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}](${{github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})**
+        <details>
+        <summary>参数解析结果</summary>
+        |args|value|
+        |:-:|:-:|
+        | repository | ${{ github.repository }} |
+        | head ref | ${{ needs.parse-request.outputs.FETCH_REF }} |
+        | base ref | ${{ needs.parse-request.outputs.SRC_REF }} |
+        |LAVA repo | ${{ needs.parse-request.outputs.testcase_repo }} |
+        |LAVA Template | ${{ needs.parse-request.outputs.lava_template }} |
+        |Testcase path | ${{ needs.parse-request.outputs.testcase_path }} |
 
-          |args|value|
-          |:-:|:-:|
-          | repository | ${{ github.repository }} |
-          | head ref | ${{ needs.parse-request.outputs.FETCH_REF }} |
-          | base ref | ${{ needs.parse-request.outputs.SRC_REF }} |
-          |LAVA repo | ${{ needs.parse-request.outputs.testcase_repo }} |
-          |LAVA Template | ${{ needs.parse-request.outputs.lava_template }} |
-          |Testcase path | ${{ needs.parse-request.outputs.testcase_path }} |
-
+        </details>
+        
         ---
 
 
@@ -94,7 +97,9 @@ jobs:
       event_name: ${{ github.event_name }}
       event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.number || github.event.issue.number }}
       append_content: |
-        
+        **测试完成**
+        <details>
+        <summary> 详细结果:</summary>
         # RVCK result
 
         | check | result |
@@ -111,4 +116,5 @@ jobs:
         ${{ needs.lava-trigger.outputs.summary_content }}
         
         ${{ needs.check-patch.outputs.summary_content }}
+        </details>
     
