@@ -60,8 +60,155 @@ flowchart TB
 
     rava-actions --- lava-trigger
     rava-actions --- update-status
-    rava-actions --- codelint 
+    rava-actions --- codelint
 ```
 
 ## rava actions
 
+```mermaid
+flowchart TB
+    subgraph requests
+    pr["pull_request_target"]
+    issue["issue"]
+    comment["issue_comment"]
+    other_req["..."]
+    end
+
+    subgraph actions
+    direction TB
+    rava-actions["`rava-actions
+    接收、解析请求
+    `"]
+    end
+    
+    pr --> rava-actions
+    issue --> rava-actions
+    comment --> rava-actions
+    other_req --> rava-actions
+
+    subgraph funcs
+    direction TB
+    
+    codelint
+    
+    lava-trigger
+    
+    update-status1["update-status
+    if: 非pr请求
+    "]
+
+    update-status2["update-status
+    更新结果:
+    pr 新增一条评论
+    issue|comment 在原消息后面追加
+    "]
+    
+    codelint --> update-status2
+    lava-trigger --> update-status2
+    update-status2 --> End([end])
+
+    end
+    
+    rava-actions --> lava-trigger
+    rava-actions --> codelint
+    rava-actions --> update-status1
+```
+
+## rvck actions
+
+
+```mermaid
+flowchart TB
+    subgraph requests
+    pr["pull_request_target"]
+    issue["issue"]
+    comment["issue_comment"]
+    other_req["..."]
+    end
+
+    subgraph actions
+    direction TB
+    rvck-actions["rvck-actions
+    接收请求
+    "]
+    end
+    
+    pr --> rvck-actions
+    issue --> rvck-actions
+    comment --> rvck-actions
+    other_req --> rvck-actions
+
+    subgraph funcs
+    direction TB
+    
+    parse-rvck["parse-rvck
+    解析请求，传递参数到子任务
+    "] --> check-patch["check-patch
+    if: pr请求
+    "]
+    
+    parse-rvck --> kunit-test
+
+    parse-rvck --> kernel-build --构建成功的内核用于lava--> lava-trigger
+    
+    
+    parse-rvck --> update-status1["update-status
+    if: 非pr请求
+    "]
+
+    update-status2["update-status
+    更新结果:
+    pr 新增一条评论
+    issue|comment 在原消息后面追加
+    "]
+    
+    check-patch --> update-status2
+    kunit-test --> update-status2
+    lava-trigger --> update-status2
+    update-status2 --> End([end])
+
+    end
+    
+    rvck-actions --> parse-rvck
+    
+```
+
+## 详细实现
+
+### lava-trigger
+
+```mermaid
+flowchart TB
+  A[接收请求] --> B[拉取 lava 代码] --> C[填写 template 文件] --> D[提交lava请求]
+  subgraph lava-result
+  
+  subgraph wait1
+    AA{{判断 cache标志位文件 是否存在}} --存在--> BB([end])
+    AA --> CC["lavacli wait
+    等待lava执行结果
+    "] --> DD[lava是否返回结果] --是--> EE[设置cache文件作为标志位] --> BB
+    DD --否 --> BB
+  end
+  subgraph wait2
+    W2[...]
+  end
+  subgraph wait3
+    W3[...]
+  end
+  subgraph waitN
+    WN[...]
+  end
+
+  wait1 -.-> wait2 -.-> wait3 -."...".-> waitN
+  
+  end
+
+  
+  D --> lava-result  --> E[解析结果并输出] --> F([end])
+  
+  D -.-> on-cancel["on-cancel
+  当任务中途推出时, 取消lava任务
+  "] -.-> F
+  
+  lava-result -.-> on-cancel
+```
