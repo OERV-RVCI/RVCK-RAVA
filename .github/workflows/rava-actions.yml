@@ -135,7 +135,7 @@ jobs:
     secrets:
       lava_token: ${{ secrets.lava_token }}
     with:
-      kernel_download_url: 'https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/rvck/latest/Image'
+      kernel_download_url: 'https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/rvck-olk/latest/Image'
       testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
       testcase_ref: ${{ needs.parse-request.outputs.testcase_ref }}
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
