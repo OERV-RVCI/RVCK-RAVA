@@ -3,15 +3,13 @@ name: kunit-build
 on:
   workflow_call:
     inputs:
-      kernel_src_repo:
+      commit_url:
         type: string
         required: true
-        description: '内核源码仓库'
-      
-      fetch_ref:
-        type: string
-        required: true
-        description: '内核分支或sha值'
+        description: |
+          内核源码仓库commit链接, 如: 
+            - https://github.com/RVCK-Project/rvck/commit/32c7ba2136024ee1563416607e3265ccbee6a55e
+            - https://github.com/RVCK-Project/rvck-olk/pull/103
       
       upload_dir:
         type: string
@@ -34,7 +32,7 @@ jobs:
     runs-on:
       group: kernel_build-runner
     container:
-      image: 'hub.oepkgs.net/oerv-ci/rava-action-runner:latest'
+      image: 'hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v1'
       
     outputs:
       kernel_download_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
@@ -42,58 +40,13 @@ jobs:
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      kernel_result_dir: kernel-result
+      kernel_result_dir: /srv/guix_result/
 
     steps:
-      - name: checkout kernel-src
-        env:
-          REPO: ${{ inputs.kernel_src_repo }}
-          fetch_ref: ${{ inputs.fetch_ref }}
-        shell: bash
+      - name: kernel-build
         run: |
-          rm -rf kernel-src || true
-        
-          set -ex
-          git init kernel-src
-          cd kernel-src
-          git config user.email rvci@isrc.iscas.ac.cn
-          git config user.name rvci
-          git remote add origin "${REPO}"
-
-          res=false
-          for((retry_times=0; retry_times < 10; retry_times++)); do
-              if git fetch origin "$fetch_ref":"$fetch_ref" --depth=1 --progress; then
-                  res=true
-                  break
-              fi
-              sleep 5
-          done
-          if [ "$res" != "true" ]; then
-              exit 1
-          fi
-
-          git checkout "$fetch_ref"
-
-        
-      - name: run kernel build
-        id: kernel-build
-        run: |
-          cd kernel-src
-          export ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu-
-          make distclean
-          make openeuler_defconfig
-          make Image -j$(nproc)
-          make modules -j$(nproc)
-          make dtbs -j$(nproc)
-
-          make INSTALL_MOD_PATH="../$kernel_result_dir" modules_install -j$(nproc)
-          mkdir -p "../$kernel_result_dir/dtb/thead"
-          cp vmlinux "../$kernel_result_dir"
-          cp arch/riscv/boot/Image "../$kernel_result_dir/Image"
-          
-          install -m 644 $(find arch/riscv/boot/dts/ -name "*.dtb") "../$kernel_result_dir"/dtb
-          mv $(find arch/riscv/boot/dts/ -name "th1520*.dtb") "../$kernel_result_dir"/dtb/thead
-
+          guix-cross-build ${{ inputs.commit_url }}
+   
       - name: publish kernel
         id: publish-kernel
         env:
@@ -109,7 +62,7 @@ jobs:
         continue-on-error: true
         with:
           name: kernel-result-${{ github.run_id	}}
-          path: kernel-result
+          path: ${kernel_result_dir}
 
       
       - name: summary
