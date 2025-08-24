@@ -145,13 +145,13 @@ jobs:
               if "pull_request" in payload["issue"]:  # pr
                   res["FETCH_REF"] = f"pull/{res['ISSUE_ID']}/head"
                   res["SRC_REF"] = get_pr_src_ref(res["ISSUE_ID"], res["REPO"])
-                  res["COMMIT_URL"] = f'{payload["repository"]["clone_url"]}/pull/{res["ISSUE_ID"]}'
+                  res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/pull/{res["ISSUE_ID"]}'
                   # res["PATCH_URL"] = payload["issue"]["pull_request"]["patch_url"]
               else:
                   if "fetch" not in res:
                       raise Exception("params:fetch is required")
                   res["FETCH_REF"] = res.pop("fetch")
-                  res["COMMIT_URL"] = f'{payload["repository"]["clone_url"]}/commit/{res["FETCH_REF"]}'
+                  res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/pull/{res["ISSUE_ID"]}'
               
               write_properties_file(res)
 
@@ -170,7 +170,7 @@ jobs:
               res["REPO"] = payload["repository"]["clone_url"]
               res["ISSUE_ID"] = payload["number"]
               res["FETCH_REF"] = f"pull/{res['ISSUE_ID']}/head"
-              res["COMMIT_URL"] = f'{payload["repository"]["clone_url"]}/pull/{res["ISSUE_ID"]}'
+              res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/pull/{res["ISSUE_ID"]}'
               res["SRC_REF"] = get_pr_src_ref(res["ISSUE_ID"], res["REPO"])
 
               write_properties_file(res)
