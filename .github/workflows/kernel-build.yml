@@ -54,30 +54,20 @@ jobs:
           RSYNC_PASSWORD: ${{ secrets.rync_passphrase }}
         run: |
           
-          rsync -av --progress --mkpath "${kernel_result_dir}/*/Image" rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
+          rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
           echo "kernel_download_url=https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/Image" >> $GITHUB_OUTPUT
       
-      ## 归档内核构建结果
-      - name: archive kernel result
-        id: archive-kernel
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: kernel-result-${{ github.run_id	}}
-          path: ${kernel_result_dir}/*/
-
       
       - name: summary
         if: ${{ always() }}
         id: summary
         env:
           kernel_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
-          archive_url: ${{ steps.archive-kernel.outputs.artifact-url }}
           upload_dir: ${{ inputs.upload_dir }}
         continue-on-error: true
         run: |
           if [ "$kernel_url" != "" ]; then
-            result="Kernel build succeeded: [${upload_dir}/Image](${kernel_url})"
+            result="Kernel build succeeded: [${upload_dir}]($(dirname ${kernel_url}))"
           else
             result="Kernel build failed."
           fi
@@ -86,8 +76,6 @@ jobs:
           ## Kernel Build Result
           
           $result
-
-          > Archive: [kernel-result.zip](${archive_url})
 
           EEE
 

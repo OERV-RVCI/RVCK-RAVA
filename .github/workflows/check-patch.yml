@@ -17,9 +17,6 @@ on:
         type: string
         required: true
         description: 'pr base分支或sha值'
-      issue_id:
-        type: string
-        required: false
 
 jobs:
   check-patch:
@@ -30,7 +27,6 @@ jobs:
       image: 'hub.oepkgs.net/oerv-ci/rava-action-runner:latest'
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ISSUE_ID: ${{ inputs.issue_id }}
       REPO: ${{ inputs.kernel_src_repo }}
     
     steps:
