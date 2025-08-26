@@ -85,7 +85,7 @@ jobs:
       src_ref: ${{ needs.parse-request.outputs.SRC_REF }}
   
   collect-result:
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.parse-request.outputs.REPO }}
     needs: [parse-request, kunit-test, kernel-build, lava-trigger, check-patch]
     permissions:
       issues: write
