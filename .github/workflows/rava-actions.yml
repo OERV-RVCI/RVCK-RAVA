@@ -164,8 +164,8 @@ jobs:
       check_path: ${{ needs.parse-request.outputs.codelint_check_path }}
   
   collect-result:
-    needs: [run-lava-check, run-codelint]
-    if: ${{ !cancelled() }}
+    needs: [run-lava-check, run-codelint, parse-request]
+    if: ${{ !cancelled() && needs.parse-request.outputs.is_check == 'true' }}
     permissions:
       issues: write
       pull-requests: write
