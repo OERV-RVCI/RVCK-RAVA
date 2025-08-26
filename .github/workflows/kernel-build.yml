@@ -67,7 +67,7 @@ jobs:
         continue-on-error: true
         run: |
           if [ "$kernel_url" != "" ]; then
-            result="Kernel build succeeded: [${upload_dir}]($(dirname ${kernel_url}))"
+            result="Kernel build succeeded: [${upload_dir}]($(dirname ${kernel_url}))/"
           else
             result="Kernel build failed."
           fi
