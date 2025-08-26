@@ -39,10 +39,9 @@ jobs:
             fi
 
             ## pr 强制使用当前分支，不允许指定 / issue_comment略过
-            if [ "${{ github.event.pull_request.head.sha }}" != "" ]; then
-              testcase_repo=${{ github.event.pull_request.head.repo.full_name }}
-              testcase_ref=${{ github.event.pull_request.head.sha }}
-            fi
+            _pr_id="${{ github.event.number || github.event.issue.number }}"
+            testcase_repo="$(gh pr view "$_pr_id" --json headRepositoryOwner -q '.headRepositoryOwner.login')/$(gh pr view "$_pr_id" --json headRepository -q '.headRepository.name')"
+            testcase_ref=$(gh pr view "$_pr_id" --json headRefOid -q .headRefOid)
           }
 
           function parse_comment() {
@@ -58,10 +57,11 @@ jobs:
           if [ "$event_name" = 'pull_request' ] || [ "$event_name" = 'pull_request_target' ]; then
             parse_pr "${{ github.event.pull_request.title }}"
           elif [ "$event_name" = 'issues' ]; then
-            parse_comment "${{ github.event.issue.body }}"
+            parse_comment "${{ github.event.issue.body }}" || exit 0
           elif [ "$event_name" = 'issue_comment' ]; then
-            parse_comment "${{ github.event.comment.body }}"
+            parse_comment "${{ github.event.comment.body }}" || exit 0
             if [ "${{ github.event.issue.pull_request }}" != "" ]; then
+              # pr comment
               parse_pr "${{ github.event.issue.title }}"
             fi
           fi
