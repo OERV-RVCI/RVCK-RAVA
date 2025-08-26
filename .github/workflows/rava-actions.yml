@@ -15,6 +15,7 @@ jobs:
       testcase_repo: ${{ steps.parse.outputs.testcase_repo }}
       testcase_ref: ${{ steps.parse.outputs.testcase_ref }}
       summary: ${{ steps.parse.outputs.summary || steps.onfailure.outputs.summary }}
+      is_check: ${{ steps.parse.outputs.is_check }}
       codelint_check_path: ${{ steps.parse.outputs.codelint_check_path }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -26,6 +27,7 @@ jobs:
         run: |
           function parse_pr() {
             title="$1"
+            echo is_check=true >> $GITHUB_OUTPUT
             # title=[lava-job-template/qemu/qemu.yaml]-[lava-testcases/common-test/ltp/ltp.yaml]: xxx
             if [ "$lava_template" = "" ]; then
               lava_template=$(echo "$title" | awk -F'\\]-\\[' '{print $1}')
@@ -49,6 +51,7 @@ jobs:
             if [ "${comment_body:0:6}" != '/check' ]; then
               return -1
             fi
+            echo is_check=true >> $GITHUB_OUTPUT
             lava_template="$(echo "$comment_body" | awk -F'lava_template=' '{print $2}' | awk '{print $1}')"
             lava_testcase_path="$(echo "$comment_body" | awk -F'testcase_path=' '{print $2}' | awk '{print $1}')"
           }
@@ -64,6 +67,9 @@ jobs:
               # pr comment
               parse_pr "${{ github.event.issue.title }}"
             fi
+          else
+            echo "不支持的事件类型 $event_name, ignore"
+            exit 0
           fi
           set +x
           testcase_repo=${testcase_repo:-${{ github.repository }}}
@@ -106,7 +112,7 @@ jobs:
 
           cat summary >> $GITHUB_STEP_SUMMARY
       - id: onfailure
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.parse.is_check == 'true' }}
         run: |
           log_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           cat > summary << EOF
@@ -121,7 +127,7 @@ jobs:
   
   pre-check:
     needs: [parse-request]
-    if: ${{ !cancelled() && github.event_name != 'pull_request_target' }}
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.parse-request.outputs.is_check == 'true' }}
     permissions:
       issues: write
       pull-requests: write
@@ -158,8 +164,8 @@ jobs:
       check_path: ${{ needs.parse-request.outputs.codelint_check_path }}
   
   collect-result:
-    needs: [run-lava-check, run-codelint]
-    if: ${{ !cancelled() }}
+    needs: [run-lava-check, run-codelint, parse-request]
+    if: ${{ !cancelled() && needs.parse-request.outputs.is_check == 'true' }}
     permissions:
       issues: write
       pull-requests: write
