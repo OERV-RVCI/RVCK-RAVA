@@ -10,7 +10,7 @@ jobs:
   
   pre-check:
     needs: [parse-request]
-    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.parse-request.outputs.REPO }}
+    if: ${{ !cancelled() && needs.parse-request.outputs.REPO }}
     permissions:
       issues: write
       pull-requests: write
@@ -86,7 +86,7 @@ jobs:
   
   collect-result:
     if: ${{ !cancelled() && needs.parse-request.outputs.REPO }}
-    needs: [parse-request, kunit-test, kernel-build, lava-trigger, check-patch]
+    needs: [parse-request, pre-check, kunit-test, kernel-build, lava-trigger, check-patch]
     permissions:
       issues: write
       pull-requests: write
@@ -95,8 +95,8 @@ jobs:
       gh_token: ${{ secrets.github_token }}
     with:
       repo: ${{ github.repository }}
-      event_name: ${{ github.event_name }}
-      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.number || github.event.issue.number }}
+      event_name: ${{ needs.pre-check.outputs.event_name }}
+      event_id: ${{ needs.pre-check.outputs.event_id }}
       append_content: |
         **测试完成**
         <details>

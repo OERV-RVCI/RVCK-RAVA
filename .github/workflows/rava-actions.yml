@@ -127,7 +127,7 @@ jobs:
   
   pre-check:
     needs: [parse-request]
-    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.parse-request.outputs.is_check == 'true' }}
+    if: ${{ !cancelled() && needs.parse-request.outputs.is_check == 'true' }}
     permissions:
       issues: write
       pull-requests: write
@@ -164,7 +164,7 @@ jobs:
       check_path: ${{ needs.parse-request.outputs.codelint_check_path }}
   
   collect-result:
-    needs: [run-lava-check, run-codelint, parse-request]
+    needs: [pre-check, run-lava-check, run-codelint, parse-request]
     if: ${{ !cancelled() && needs.parse-request.outputs.is_check == 'true' }}
     permissions:
       issues: write
@@ -174,8 +174,8 @@ jobs:
       gh_token: ${{ secrets.github_token }}
     with:
       repo: ${{ github.repository }}
-      event_name: ${{ github.event_name }}
-      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.number || github.event.issue.number }}
+      event_name: ${{ needs.pre-check.outputs.event_name }}
+      event_id: ${{ needs.pre-check.outputs.event_id }}
       append_content: |
         <details>
 
