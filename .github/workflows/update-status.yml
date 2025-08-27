@@ -18,6 +18,13 @@ on:
       append_content:
         type: string
         description: '追加内容'
+    outputs:
+      event_id:
+        description: '事件id'
+        value: ${{ jobs.update-status.outputs.event_id }}
+      event_name:
+        description: '事件类型, issue|comment'
+        value: ${{ jobs.update-status.outputs.event_name }}
     secrets:
       gh_token:
         required: true
@@ -31,6 +38,9 @@ env:
 
 jobs:
   update-status:
+    outputs:
+      event_id: ${{ steps.append-content.outputs.event_id }}
+      event_name: ${{ steps.append-content.outputs.event_name }}
     runs-on: 'ubuntu-latest'
     steps:
       - name: show-info
@@ -73,6 +83,9 @@ jobs:
           
           echo $new_content
           
+          new_event_name=${event_name}
+          new_event_id=$event_id
+
           case $event_name in
           issue_comment)
           gh api --method PATCH \
@@ -84,7 +97,11 @@ jobs:
           issues)
             gh issue edit "$event_id" -b "$new_content"
             ;;
-          pull_request_target)
-            gh pr comment "$event_id" -b "$new_content"
+          pull_request*)
+            new_event_id=$(gh pr comment "$event_id" -b "$new_content" | awk -F'-' '{print $NF}')
+            new_event_name=issue_comment
             ;;
           esac
+
+          echo "event_id=$new_event_id" >> $GITHUB_OUTPUT
+          echo "event_name=$new_event_name" >> $GITHUB_OUTPUT
