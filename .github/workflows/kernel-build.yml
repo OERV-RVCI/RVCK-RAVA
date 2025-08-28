@@ -19,6 +19,8 @@ on:
     outputs:
       kernel_download_url:
         value: ${{ jobs.kernel-build.outputs.kernel_download_url }}
+      initramfs_download_url:
+        value: ${{ jobs.kernel-build.outputs.initramfs_download_url }}
       summary_content:
         value: ${{ jobs.kernel-build.outputs.summary_content }}
     
@@ -37,6 +39,7 @@ jobs:
       
     outputs:
       kernel_download_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
+      initramfs_download_url: ${{ steps.publish-kernel.outputs.initramfs_download_url }}      
       summary_content: ${{ steps.summary.outputs.summary_content }}
 
     env:
@@ -56,6 +59,7 @@ jobs:
           
           rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
           echo "kernel_download_url=https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/Image" >> $GITHUB_OUTPUT
+          echo "initramfs_download_url=https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/initramfs.img" >> $GITHUB_OUTPUT
       
       - name: summary
         if: ${{ always() }}

@@ -6,9 +6,8 @@ on:
 jobs:
   parse-request:
     uses: ./.github/workflows/parse-rvck.yml
-    secrets: inherit
+#    secrets: inherit
   
-    
   pre-check:
     needs: [parse-request]
     if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.parse-request.outputs.REPO }}
@@ -73,6 +72,7 @@ jobs:
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
       testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_download_url: ${{ needs.kernel-build.outputs.kernel_download_url }}
+      initramfs_download_url: ${{ needs.kernel-build.outputs.initramfs_download_url }}
 
   check-patch:
     needs: [parse-request]

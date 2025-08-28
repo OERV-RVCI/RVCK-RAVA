@@ -17,6 +17,11 @@ on:
         required: false
         type: string
 
+      initramfs_download_url:
+        description: 'initramfs下载链接'
+        required: false
+        type: string
+
       testcase_repo:
         description: 'lava 仓库地址, {owner}/{repo}'
         required: true
@@ -52,6 +57,7 @@ env:
   testcase_ref: ${{ inputs.testcase_ref }}
   kernel_download_url: ${{ inputs.kernel_download_url }}
   rootfs_download_url: ${{ inputs.rootfs_download_url }}
+  initramfs_download_url: ${{ inputs.initramfs_download_url }}
   lava_template: ${{ inputs.lava_template }}
   testcase_path: ${{ inputs.testcase_path }}
   lava_server: lava.oerv.ac.cn
@@ -85,10 +91,12 @@ jobs:
           input_rootfs_download_url: ${{ inputs.rootfs_download_url }}
         run: |
           echo "ssh_port=$(od -An -N2 -i /dev/urandom | awk -v min=10000 -v max=20000 '{print min + ($1 % (max - min + 1))}')" >> $GITHUB_OUTPUT
-          qemu_job_name="${github_repo/\//_}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}"
-          echo "qemu_job_name=$qemu_job_name" >> $GITHUB_OUTPUT
+          repo_name=${github_repo/\//_}
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+          job_name="${repo_name}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}"
+          echo "job_name=$job_name" >> $GITHUB_OUTPUT
           device_type="$(yq -r .device_type "$lava_template")"
-          echo "testitem_name=${qemu_job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_${device_type}" >> $GITHUB_OUTPUT
+          echo "testitem_name=${job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_${device_type}" >> $GITHUB_OUTPUT
           rootfs_download_url="${input_rootfs_download_url}"
           if [ -z "$rootfs_download_url" ]; then
             if [ "$device_type" = qemu ]; then
@@ -103,9 +111,10 @@ jobs:
         shell: python3 {0}
         env:
           ssh_port: ${{ steps.gen_var.outputs.ssh_port }}
-          qemu_job_name: ${{ steps.gen_var.outputs.qemu_job_name }}
+          job_name: ${{ steps.gen_var.outputs.qemu_job_name }}
           testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
           rootfs_download_url: ${{ steps.gen_var.outputs.rootfs_download_url }}
+          repo_name: ${{ steps.gen_var.outputs.repo_name }}
         run: |
           import yaml
           import os
@@ -121,8 +130,8 @@ jobs:
           testcase_path = os.getenv("testcase_path")
           assert testcase_path, "Testcase URL is not set"
 
-          qemu_job_name = os.getenv("qemu_job_name")
-          assert qemu_job_name, "QEMU job name is not set"
+          job_name = os.getenv("job_name")
+          assert job_name, "Job name is not set"
 
           testitem_name = os.getenv("testitem_name")
           assert testitem_name, "testitem_name is not set"
@@ -136,8 +145,14 @@ jobs:
           rootfs_download_url = os.getenv("rootfs_download_url")
           assert rootfs_download_url, "Rootfs download URL is not set"
 
+          repo_name = os.getenv("repo_name")
+          assert repo_name, "repo name is not set"
+
+          initramfs_download_url = os.getenv("initramfs_download_url")
+          assert initramfs_download_url, "Initramfs download URL is not set"
+
           content = open(lava_template, "r").read()\
-                    .replace("${job_name}", qemu_job_name)\
+                    .replace("${job_name}", job_name)\
                     .replace("${kernel_image_url}", kernel_download_url)\
                     .replace("${rootfs_image_url}", rootfs_download_url)\
                     .replace("${testcase_repo}", f"https://github.com/{testcase_repo}.git")\
@@ -150,6 +165,11 @@ jobs:
           if data['device_type'] == 'qemu' and 'context' in data and 'extra_options' in data['context']:
               data['context']['extra_options'] = [i.replace('hostfwd=tcp::10001-:22', f'hostfwd=tcp::{ssh_port}-:22') for i in list(data['context']['extra_options'])]
 
+          # rvck 需要initramfs
+          if repo_name == "rvck":
+              data['context']['extra_options'] = [i.replace('root=/dev/vda', 'root=/dev/vdb') for i in list(data['context']['extra_options'])]
+              data['actions'][0]['deploy']['images']['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
+
           if len(testcase_ref):
               data['actions'][2]['test']['definitions'][0]['revision'] = testcase_ref
 
@@ -160,8 +180,8 @@ jobs:
 
       - name: run lava check
         id: run_lava_check
-        env:
-          qemu_job_name: ${{ steps.gen_var.outputs.qemu_job_name }}
+#        env:
+#          job_name: ${{ steps.gen_var.outputs.job_name }}
         shell: bash
         run: |
           echo "=========== edited lava template ==========="
@@ -299,6 +319,7 @@ jobs:
           - testcase_path: ${testcase_path}
           - testitem_name: ${testitem_name}
           - kernel_download_url: ${kernel_download_url}
+          - initramfs_download_url: ${initramfs_download_url}
           - rootfs_download_url: ${rootfs_download_url}
           
           ### result:
