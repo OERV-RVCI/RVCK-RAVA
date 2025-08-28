@@ -32,7 +32,7 @@ jobs:
     runs-on:
       group: kernel_build-runner
     container:
-      image: 'hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v5'
+      image: 'hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v11'
       options: --privileged
       
     outputs:
@@ -56,7 +56,6 @@ jobs:
           
           rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
           echo "kernel_download_url=https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/Image" >> $GITHUB_OUTPUT
-      
       
       - name: summary
         if: ${{ always() }}
