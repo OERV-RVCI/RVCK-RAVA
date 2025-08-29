@@ -111,7 +111,7 @@ jobs:
         shell: python3 {0}
         env:
           ssh_port: ${{ steps.gen_var.outputs.ssh_port }}
-          job_name: ${{ steps.gen_var.outputs.qemu_job_name }}
+          job_name: ${{ steps.gen_var.outputs.job_name }}
           testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
           rootfs_download_url: ${{ steps.gen_var.outputs.rootfs_download_url }}
           repo_name: ${{ steps.gen_var.outputs.repo_name }}
