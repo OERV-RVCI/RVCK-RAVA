@@ -176,7 +176,7 @@ jobs:
           data['actions'][2]['test']['definitions'][0].pop('parameters', None)
 
           with open(lava_template, 'w') as f:
-              f.write(yaml.dump(data))
+              f.write(yaml.dump(data, sort_keys=False))
 
       - name: run lava check
         id: run_lava_check
