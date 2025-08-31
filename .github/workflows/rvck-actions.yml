@@ -56,7 +56,7 @@ jobs:
     needs: [parse-request]
     uses: ./.github/workflows/kernel-build.yml
     with:
-      commit_url: ${{ needs.parse-request.outputs.commit_url }}
+      commit_url: ${{ needs.parse-request.outputs.COMMIT_URL }}
       upload_dir: "${{ github.repository }}/${{ needs.parse-request.outputs.SRC_REF && needs.parse-request.outputs.ISSUE_ID || github.event.comment.id || needs.parse-request.outputs.ISSUE_ID }}"
     secrets:
       rync_passphrase: ${{ secrets.RSYNC_PASSPHRASE }}
