@@ -59,7 +59,7 @@ jobs:
 
           EEE
    
-      - name: append-content
+      - id: append-content
         run: |
           set -x
           case $event_name in
