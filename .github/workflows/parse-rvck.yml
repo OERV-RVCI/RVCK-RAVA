@@ -158,7 +158,7 @@ jobs:
 
           def pull_request_target(payload: dict):
               # pr 创建
-              if payload["action"] not in ["opened", "reopend", "synchronize"]:
+              if payload["action"] not in ["opened", "reopened", "synchronize"]:
                   return
               
               print(f"from pr {payload['action']}")

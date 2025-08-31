@@ -48,12 +48,14 @@ jobs:
   kunit-test:
     needs: [parse-request]
     uses: ./.github/workflows/kunit-test.yml
+    if: ${{ needs.parse-request.outputs.REPO }}
     with:
       kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
       fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
   
   kernel-build:
     needs: [parse-request]
+    if: ${{ needs.parse-request.outputs.REPO }}
     uses: ./.github/workflows/kernel-build.yml
     with:
       commit_url: ${{ needs.parse-request.outputs.COMMIT_URL }}
