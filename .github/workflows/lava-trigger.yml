@@ -87,13 +87,14 @@ jobs:
         env:
           github_repo: ${{ github.repository }}
           event_name: ${{ github.event_name }}
-          issue_id: ${{ github.event.pull_request.number || github.event.issue_comment.number || github.event.issue.number }}
+          issue_id: ${{ github.event.pull_request.number || github.event.issue.number }}
+          comment_id: ${{ github.event.comment.id }}
           input_rootfs_download_url: ${{ inputs.rootfs_download_url }}
         run: |
           echo "ssh_port=$(od -An -N2 -i /dev/urandom | awk -v min=10000 -v max=20000 '{print min + ($1 % (max - min + 1))}')" >> $GITHUB_OUTPUT
           repo_name=${github_repo#*/}
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
-          job_name="${github_repo/\//_}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}"
+          job_name="${github_repo/\//_}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}_${comment_id:+_$comment_id}"
           echo "job_name=$job_name" >> $GITHUB_OUTPUT
           device_type="$(yq -r .device_type "$lava_template")"
           echo "testitem_name=${job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_${device_type}" >> $GITHUB_OUTPUT
