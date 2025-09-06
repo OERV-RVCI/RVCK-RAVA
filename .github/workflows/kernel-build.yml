@@ -21,6 +21,10 @@ on:
         value: ${{ jobs.kernel-build.outputs.kernel_download_url }}
       initramfs_download_url:
         value: ${{ jobs.kernel-build.outputs.initramfs_download_url }}
+      kernel_md5sum:
+        value: ${{ jobs.kernel-build.outputs.kernel_md5sum }}
+      initramfs_md5sum:
+        value: ${{ jobs.kernel-build.outputs.initramfs_md5sum }}
       summary_content:
         value: ${{ jobs.kernel-build.outputs.summary_content }}
     
@@ -36,7 +40,9 @@ jobs:
             
     outputs:
       kernel_download_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
-      initramfs_download_url: ${{ steps.publish-kernel.outputs.initramfs_download_url }}      
+      initramfs_download_url: ${{ steps.publish-kernel.outputs.initramfs_download_url }}
+      kernel_md5sum: ${{ steps.publish-kernel.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ steps.publish-kernel.outputs.initramfs_md5sum }}
       summary_content: ${{ steps.summary.outputs.summary_content }}
 
     env:
@@ -56,7 +62,7 @@ jobs:
           mkdir -p "${kernel_result_dir}"
           docker run --privileged \
             -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
-            hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v11 \
+            hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v14 \
             guix-cross-build ${{ inputs.commit_url }}
    
       - name: publish kernel
@@ -67,7 +73,9 @@ jobs:
           
           rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
           echo "kernel_download_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/Image" >> $GITHUB_OUTPUT
+          echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
           echo "initramfs_download_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/initramfs.img" >> $GITHUB_OUTPUT
+          echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
       
       - name: summary
         if: ${{ always() }}
@@ -87,6 +95,8 @@ jobs:
           ## Kernel Build Result
           
           $result
+          
+          $(cat "${kernel_result_dir}"/*/*.md5sum)
 
           EEE
 

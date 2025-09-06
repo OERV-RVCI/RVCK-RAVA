@@ -11,7 +11,11 @@ on:
         description: '内核下载链接'
         type: string
         required: true
-        
+      kernel_md5sum:
+        description: '内核md5sum'
+        type: string
+        required: true
+
       rootfs_download_url:
         description: 'rootfs下载链接'
         required: false
@@ -19,6 +23,11 @@ on:
 
       initramfs_download_url:
         description: 'initramfs下载链接'
+        required: false
+        type: string
+      
+      initramfs_md5sum:
+        description: 'initramfs md5sum'
         required: false
         type: string
 
@@ -56,7 +65,6 @@ env:
   testcase_repo: ${{ inputs.testcase_repo }}
   testcase_ref: ${{ inputs.testcase_ref }}
   kernel_download_url: ${{ inputs.kernel_download_url }}
-  rootfs_download_url: ${{ inputs.rootfs_download_url }}
   initramfs_download_url: ${{ inputs.initramfs_download_url }}
   lava_template: ${{ inputs.lava_template }}
   testcase_path: ${{ inputs.testcase_path }}
@@ -90,6 +98,8 @@ jobs:
           issue_id: ${{ github.event.pull_request.number || github.event.issue.number }}
           comment_id: ${{ github.event.comment.id }}
           input_rootfs_download_url: ${{ inputs.rootfs_download_url }}
+          input_kernel_md5sum: ${{ inputs.kernel_md5sum }}
+          input_initramfs_md5sum: ${{ inputs.initramfs_md5sum }}
         run: |
           echo "ssh_port=$(od -An -N2 -i /dev/urandom | awk -v min=10000 -v max=20000 '{print min + ($1 % (max - min + 1))}')" >> $GITHUB_OUTPUT
           repo_name=${github_repo#*/}
@@ -106,7 +116,19 @@ jobs:
               rootfs_download_url="https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.tar.gz"
             fi
           fi
+
+          kernel_md5sum="$input_kernel_md5sum"
+          if [ -z "$kernel_md5sum" ]; then
+              kernel_md5sum=$(curl "${kernel_download_url}.md5sum" 2>/dev/null | awk '{print $1}' || echo "")
+          fi
+          initramfs_md5sum="$input_initramfs_md5sum"
+          if [ -z "$initramfs_md5sum" ]; then
+              initramfs_md5sum=$(curl "${initramfs_download_url}.md5sum" 2>/dev/null | awk '{print $1}' || echo "")
+          fi
+
           echo "rootfs_download_url=$rootfs_download_url" >> $GITHUB_OUTPUT
+          echo "kernel_md5sum=$kernel_md5sum" >> $GITHUB_OUTPUT
+          echo "initramfs_md5sum=$initramfs_md5sum" >> $GITHUB_OUTPUT
 
       - name: setup_lava_template
         shell: python3 {0}
@@ -143,6 +165,8 @@ jobs:
           kernel_download_url = os.getenv("kernel_download_url")
           assert kernel_download_url, "Kernel download URL is not set"
 
+          kernel_md5sum = os.getenv("kernel_md5sum", "")
+
           rootfs_download_url = os.getenv("rootfs_download_url")
           assert rootfs_download_url, "Rootfs download URL is not set"
 
@@ -151,6 +175,8 @@ jobs:
 
           initramfs_download_url = os.getenv("initramfs_download_url")
           assert initramfs_download_url, "Initramfs download URL is not set"
+
+          initramfs_md5sum = os.getenv("initramfs_md5sum")
 
           content = open(lava_template, "r").read()\
                     .replace("${job_name}", job_name)\
@@ -166,10 +192,16 @@ jobs:
           if data['device_type'] == 'qemu' and 'context' in data and 'extra_options' in data['context']:
               data['context']['extra_options'] = [i.replace('hostfwd=tcp::10001-:22', f'hostfwd=tcp::{ssh_port}-:22') for i in list(data['context']['extra_options'])]
 
+          # add kernel md5sum
+          if kernel_md5sum:
+              data['actions'][0]['deploy']['images']['kernel']['md5sum'] = kernel_md5sum
+
           # rvck 需要initramfs
           if repo_name == "rvck":
               data['context']['extra_options'] = [i.replace('root=/dev/vda', 'root=/dev/vdb') for i in list(data['context']['extra_options'])]
               data['actions'][0]['deploy']['images']['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
+              if initramfs_md5sum:
+                  data['actions'][0]['deploy']['images']['initrd']['md5sum'] = initramfs_md5sum
 
           if len(testcase_ref):
               data['actions'][2]['test']['definitions'][0]['revision'] = testcase_ref
