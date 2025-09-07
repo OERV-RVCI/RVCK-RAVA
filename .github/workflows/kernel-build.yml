@@ -59,6 +59,9 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3      
+      
+      - name: test qemu
+        run: docker run --rm --platform linux/riscv64 alpine uname -a
 
       - name: kernel-build
         run: |
