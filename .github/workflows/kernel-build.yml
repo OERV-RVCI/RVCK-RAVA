@@ -54,11 +54,11 @@ jobs:
         run: |
           sudo rm -rf ./* || true
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      
-      - name: binfmt_misc mount to setup qemu
+      - name: binfmt_misc mount before setup qemu
         run: ls -alh /proc/sys/fs/binfmt_misc
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3      
 
       - name: kernel-build
         run: |

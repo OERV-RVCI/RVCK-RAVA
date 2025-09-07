@@ -14,7 +14,7 @@ on:
       kernel_md5sum:
         description: '内核md5sum'
         type: string
-        required: true
+        required: false
 
       rootfs_download_url:
         description: 'rootfs下载链接'

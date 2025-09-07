@@ -75,6 +75,8 @@ jobs:
       testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_download_url: ${{ needs.kernel-build.outputs.kernel_download_url }}
       initramfs_download_url: ${{ needs.kernel-build.outputs.initramfs_download_url }}
+      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
 
   check-patch:
     needs: [parse-request]
