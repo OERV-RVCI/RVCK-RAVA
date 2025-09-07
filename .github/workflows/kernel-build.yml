@@ -56,13 +56,17 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+      
+      - name: binfmt_misc mount to setup qemu
+        run: ls -alh /proc/sys/fs/binfmt_misc
 
       - name: kernel-build
         run: |
+          
           mkdir -p "${kernel_result_dir}"
           docker run --privileged \
             -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
-            hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v14 \
+            hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v15 \
             guix-cross-build ${{ inputs.commit_url }}
    
       - name: publish kernel
