@@ -6,12 +6,11 @@ on:
 jobs:
   parse-request:
     uses: ./.github/workflows/parse-rvck.yml
-    secrets: inherit
+#    secrets: inherit
   
-    
   pre-check:
     needs: [parse-request]
-    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.parse-request.outputs.REPO }}
+    if: ${{ !cancelled() && needs.parse-request.outputs.REPO }}
     permissions:
       issues: write
       pull-requests: write
@@ -49,17 +48,18 @@ jobs:
   kunit-test:
     needs: [parse-request]
     uses: ./.github/workflows/kunit-test.yml
+    if: ${{ needs.parse-request.outputs.REPO }}
     with:
       kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
       fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
   
   kernel-build:
     needs: [parse-request]
+    if: ${{ needs.parse-request.outputs.REPO }}
     uses: ./.github/workflows/kernel-build.yml
     with:
-      kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
-      fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
-      upload_dir: "${{ github.repository }}/${{ needs.parse-request.outputs.ISSUE_ID }}"
+      commit_url: ${{ needs.parse-request.outputs.COMMIT_URL }}
+      upload_dir: ${{ github.repository }}/${{ github.event.comment.id && format('{0}_{1}', needs.parse-request.outputs.ISSUE_ID, github.event.comment.id) || needs.parse-request.outputs.ISSUE_ID }}
     secrets:
       rync_passphrase: ${{ secrets.RSYNC_PASSPHRASE }}
 
@@ -74,6 +74,9 @@ jobs:
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
       testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_download_url: ${{ needs.kernel-build.outputs.kernel_download_url }}
+      initramfs_download_url: ${{ needs.kernel-build.outputs.initramfs_download_url }}
+      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
 
   check-patch:
     needs: [parse-request]
@@ -84,11 +87,10 @@ jobs:
       kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
       fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
       src_ref: ${{ needs.parse-request.outputs.SRC_REF }}
-      issue_id: ${{ needs.parse-request.outputs.ISSUE_ID }}
   
   collect-result:
-    if: ${{ !cancelled() }}
-    needs: [parse-request, kunit-test, kernel-build, lava-trigger, check-patch]
+    if: ${{ !cancelled() && needs.parse-request.outputs.REPO }}
+    needs: [parse-request, pre-check, kunit-test, kernel-build, lava-trigger, check-patch]
     permissions:
       issues: write
       pull-requests: write
@@ -97,8 +99,8 @@ jobs:
       gh_token: ${{ secrets.github_token }}
     with:
       repo: ${{ github.repository }}
-      event_name: ${{ github.event_name }}
-      event_id: ${{ github.event_name == 'issue_comment' && github.event.comment.id || github.event.number || github.event.issue.number }}
+      event_name: ${{ needs.pre-check.outputs.event_name }}
+      event_id: ${{ needs.pre-check.outputs.event_id }}
       append_content: |
         **测试完成**
         <details>

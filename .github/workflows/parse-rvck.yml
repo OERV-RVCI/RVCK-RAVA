@@ -28,6 +28,9 @@ on:
       ISSUE_ID:
         description: 'pr|issue请求, issue id'
         value: ${{ jobs.parse-request.outputs.ISSUE_ID }}
+      COMMIT_URL:
+        description: '代码提交链接, pr|commit'
+        value: ${{ jobs.parse-request.outputs.COMMIT_URL }}
       NEED_RUN_JOB:
         description: '需要执行的job'
         value: ${{ jobs.parse-request.outputs.NEED_RUN_JOB }}
@@ -50,6 +53,7 @@ jobs:
       FETCH_REF: ${{ steps.parse-request.outputs.FETCH_REF }}
       SRC_REF: ${{ steps.parse-request.outputs.SRC_REF }}
       ISSUE_ID: ${{ steps.parse-request.outputs.ISSUE_ID }}
+      COMMIT_URL: ${{ steps.parse-request.outputs.COMMIT_URL }}
       NEED_RUN_JOB: ${{ steps.parse-request.outputs.NEED_RUN_JOB }}
       testcase_repo: ${{ steps.parse-request.outputs.testcase_repo }}
       lava_template: ${{ steps.parse-request.outputs.lava_template }}
@@ -141,18 +145,20 @@ jobs:
               if "pull_request" in payload["issue"]:  # pr
                   res["FETCH_REF"] = f"pull/{res['ISSUE_ID']}/head"
                   res["SRC_REF"] = get_pr_src_ref(res["ISSUE_ID"], res["REPO"])
+                  res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/pull/{res["ISSUE_ID"]}'
                   # res["PATCH_URL"] = payload["issue"]["pull_request"]["patch_url"]
               else:
                   if "fetch" not in res:
                       raise Exception("params:fetch is required")
                   res["FETCH_REF"] = res.pop("fetch")
+                  res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/commit/{res["FETCH_REF"]}'
               
               write_properties_file(res)
 
 
           def pull_request_target(payload: dict):
               # pr 创建
-              if payload["action"] not in ["opened", "reopend", "synchronize"]:
+              if payload["action"] not in ["opened", "reopened", "synchronize"]:
                   return
               
               print(f"from pr {payload['action']}")
@@ -164,6 +170,7 @@ jobs:
               res["REPO"] = payload["repository"]["clone_url"]
               res["ISSUE_ID"] = payload["number"]
               res["FETCH_REF"] = f"pull/{res['ISSUE_ID']}/head"
+              res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/pull/{res["ISSUE_ID"]}'
               res["SRC_REF"] = get_pr_src_ref(res["ISSUE_ID"], res["REPO"])
 
               write_properties_file(res)
@@ -216,6 +223,7 @@ jobs:
           echo "FETCH_REF=$(cat FETCH_REF)" >> $GITHUB_OUTPUT
           echo "SRC_REF=$(cat SRC_REF)" >> $GITHUB_OUTPUT
           echo "ISSUE_ID=$(cat ISSUE_ID)" >> $GITHUB_OUTPUT
+          echo "COMMIT_URL=$(cat COMMIT_URL)" >> $GITHUB_OUTPUT
           echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_OUTPUT
           echo "testcase_repo=$(cat testcase_repo || echo 'RVCK-Project/lavaci')" >> $GITHUB_OUTPUT
           echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_OUTPUT
