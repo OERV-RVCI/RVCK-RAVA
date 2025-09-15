@@ -107,12 +107,6 @@ jobs:
               for k in ['lava_template','testcase_path', 'fetch', 'job']:
                   if k in data:
                       res[k] = data.pop(k)
-              res["testcase_params"] = "\n".join([f"{k}={v}" for k, v in data.items()])
-
-              # 检查文件是否存在
-              for k in ['lava_template','testcase_path',]:
-                  if k in res and os.system(f'gh api repos/RVCK-Project/lavaci/contents/{res[k]}'):
-                      raise Exception(f"{k}={res[k]} not found in RVCK-Project/lavaci")
 
               print("\n\n--------------------------------")
               for k, v in res.items():
@@ -149,7 +143,8 @@ jobs:
                   # res["PATCH_URL"] = payload["issue"]["pull_request"]["patch_url"]
               else:
                   if "fetch" not in res:
-                      raise Exception("params:fetch is required")
+                      res['fetch'] = os.popen(f"gh api repos/{payload['repository']['full_name']}/commits --jq '.[0].sha' ").read().strip()
+
                   res["FETCH_REF"] = res.pop("fetch")
                   res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/commit/{res["FETCH_REF"]}'
               
@@ -185,12 +180,12 @@ jobs:
               res = parse_comment(str(payload["issue"]["body"]))
               if res is None:
                   return
-
-              if not len(res.get("fetch", "")):
-                  raise Exception("params:fetch is required")
+              if "fetch" not in res:
+                  res['fetch'] = os.popen(f"gh api repos/{payload['repository']['full_name']}/commits --jq '.[0].sha' ").read().strip()
               res["FETCH_REF"] = res.pop("fetch")
               res["REPO"] = payload["repository"]["clone_url"]
               res["ISSUE_ID"] = payload["issue"]["number"]
+              res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/commit/{res["FETCH_REF"]}'
 
               write_properties_file(res)
 
