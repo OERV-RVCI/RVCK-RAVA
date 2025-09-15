@@ -3,6 +3,13 @@ name: RVCK CI
 on:
   workflow_call:
 
+    secrets: 
+      RSYNC_PASSPHRASE: 
+        description: 'rsync上传内核所需密码'
+        required: true
+      LAVA_TOKEN:
+        required: true
+
 jobs:
   parse-request:
     uses: ./.github/workflows/parse-rvck.yml
