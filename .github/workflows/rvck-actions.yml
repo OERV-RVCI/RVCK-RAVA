@@ -56,14 +56,14 @@ jobs:
   kunit-test:
     needs: [parse-request]
     uses: ./.github/workflows/kunit-test.yml
-    if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, "kunit-test") }}
+    if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'kunit-test') }}
     with:
       kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
       fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
   
   kernel-build:
     needs: [parse-request]
-    if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, "kernel-build") }}
+    if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'kernel-build') }}
     uses: ./.github/workflows/kernel-build.yml
     with:
       commit_url: ${{ needs.parse-request.outputs.COMMIT_URL }}
@@ -75,7 +75,7 @@ jobs:
   lava-trigger:
     needs: [parse-request, kernel-build]
     uses: ./.github/workflows/lava-trigger.yml
-    if: ${{ contains(needs.parse-request.outputs.NEED_RUN_JOB, "lava-trigger") }}
+    if: ${{ contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') }}
     secrets: 
       lava_token: ${{ secrets.LAVA_TOKEN }}
     with:
@@ -89,7 +89,7 @@ jobs:
 
   check-patch:
     needs: [parse-request]
-    if: ${{ needs.parse-request.outputs.SRC_REF && contains(needs.parse-request.outputs.NEED_RUN_JOB, "check-patch") }}
+    if: ${{ needs.parse-request.outputs.SRC_REF && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'check-patch') }}
     uses: ./.github/workflows/check-patch.yml
     secrets: inherit
     with:
