@@ -69,7 +69,7 @@ jobs:
           mkdir -p "${kernel_result_dir}"
           docker run --privileged --rm \
             -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
-            hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v18 \
+            hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:v19 \
             guix-cross-build ${{ inputs.commit_url }}
    
       - name: publish kernel
