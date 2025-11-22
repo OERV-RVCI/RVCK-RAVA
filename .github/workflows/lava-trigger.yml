@@ -320,6 +320,7 @@ jobs:
           echo "summary_content<<EOF" >> $GITHUB_OUTPUT
           cat summary_content >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          exit 1
 
 
       - id: summary
@@ -376,3 +377,5 @@ jobs:
           $lava_results
           \`\`\`
           EEE
+
+          [ "${lava_health}" = Complete ]   # 设置步骤结果为失败或成功

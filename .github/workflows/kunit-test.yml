@@ -60,7 +60,7 @@ jobs:
       
       - name: run kunit test
         id: run-kunit-test
-        continue-on-error: true
+        if: ${{ !cancelled() }}
         run: |
           cd kernel-src
           make distclean
@@ -87,6 +87,8 @@ jobs:
           $(cat kunit.log)
           $(echo '```')
           EEE
+
+          grep -q 'Testing complete' kunit.log # 设置步骤结果为失败或成功
           
       # - name: after
       #   env:
