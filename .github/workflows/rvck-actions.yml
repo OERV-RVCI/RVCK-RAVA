@@ -134,4 +134,17 @@ jobs:
         ${{ needs.check-patch.outputs.summary_content }}
 
         </details>
-    
+  
+  results:
+    needs: [kunit-test, kernel-build, lava-trigger, check-patch, collect-result]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: show final result
+        run: |
+          # 所有需要运行的job都成功则整体成功
+          [ "${{ needs.kunit-test.result }}" != failure ] && \
+          [ "${{ needs.kernel-build.result }}" != failure ] && \
+          [ "${{ needs.lava-trigger.result }}" != failure ] && \
+          [ "${{ needs.check-patch.result }}" != failure ] && \
+          [ "${{ needs.collect-result.result }}" != failure ]
