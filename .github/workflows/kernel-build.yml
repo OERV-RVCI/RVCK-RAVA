@@ -85,12 +85,11 @@ jobs:
           echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
       
       - name: summary
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         id: summary
         env:
           kernel_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
           upload_dir: ${{ inputs.upload_dir }}
-        continue-on-error: true
         run: |
           if [ "$kernel_url" != "" ]; then
             result="Kernel build succeeded: [${upload_dir}]($(dirname ${kernel_url}))/"
@@ -112,4 +111,6 @@ jobs:
           echo "summary_content<<EOF" >> $GITHUB_OUTPUT
           cat summary >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+          [ "$kernel_url" != "" ] # 设置步骤状态
 

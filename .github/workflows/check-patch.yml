@@ -65,7 +65,7 @@ jobs:
 
       - name: check patch
         id: check-patch
-        continue-on-error: true
+        if: ${{ !cancelled() }}
         env:
           FETCH_REF: ${{ inputs.fetch_ref }}
           SRC_REF: ${{ inputs.src_ref }}
@@ -112,6 +112,8 @@ jobs:
           $(cat $patch_dir/checkpatch.log)
           $(echo '```')
           EEE
+
+          exit "${total_error}" # 有错误则步骤失败
           
 
   
