@@ -39,8 +39,7 @@ jobs:
       group: kernel_build-runner
             
     outputs:
-      kernel_download_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
-      initramfs_download_url: ${{ steps.publish-kernel.outputs.initramfs_download_url }}
+      kernel_files_url: ${{ steps.publish-kernel.outputs.kernel_files_url }}
       kernel_md5sum: ${{ steps.publish-kernel.outputs.kernel_md5sum }}
       initramfs_md5sum: ${{ steps.publish-kernel.outputs.initramfs_md5sum }}
       summary_content: ${{ steps.summary.outputs.summary_content }}
@@ -79,20 +78,19 @@ jobs:
         run: |
           
           rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
-          echo "kernel_download_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/Image" >> $GITHUB_OUTPUT
+          echo "kernel_files_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
-          echo "initramfs_download_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}/initramfs.img" >> $GITHUB_OUTPUT
           echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
       
       - name: summary
         if: ${{ !cancelled() }}
         id: summary
         env:
-          kernel_url: ${{ steps.publish-kernel.outputs.kernel_download_url }}
+          kernel_files_url: ${{ steps.publish-kernel.outputs.kernel_files_url }}
           upload_dir: ${{ inputs.upload_dir }}
         run: |
-          if [ "$kernel_url" != "" ]; then
-            result="Kernel build succeeded: [${upload_dir}]($(dirname ${kernel_url}))/"
+          if [ "$kernel_files_url" != "" ]; then
+            result="Kernel build succeeded: [${upload_dir}]($kernel_files_url)/"
           else
             result="Kernel build failed."
           fi
@@ -112,5 +110,5 @@ jobs:
           cat summary >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-          [ "$kernel_url" != "" ] # 设置步骤状态
+          [ "$kernel_files_url" != "" ] # 设置步骤状态
 

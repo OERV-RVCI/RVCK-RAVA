@@ -221,7 +221,7 @@ jobs:
           echo "COMMIT_URL=$(cat COMMIT_URL)" >> $GITHUB_OUTPUT
           echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_OUTPUT
           echo "testcase_repo=$(cat testcase_repo || echo 'RVCK-Project/lavaci')" >> $GITHUB_OUTPUT
-          echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_OUTPUT
+          echo "lava_template=$(cat lava_template || echo '')" >> $GITHUB_OUTPUT
           echo "testcase_path=$(cat testcase_path || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_OUTPUT
 
           echo "REPO=$(cat REPO)" >> $GITHUB_ENV
