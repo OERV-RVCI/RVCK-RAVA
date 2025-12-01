@@ -36,7 +36,7 @@ jobs:
             rm -rf kernel-src || true
             git init kernel-src
             cd kernel-src
-            set -e
+            set -ex
             git config user.email rvci@isrc.iscas.ac.cn
             git config user.name rvci
             git remote add origin "${REPO}"
@@ -70,7 +70,7 @@ jobs:
           FETCH_REF: ${{ inputs.fetch_ref }}
           SRC_REF: ${{ inputs.src_ref }}
         run: |
-        
+          set -x
           patch_dir=patch-$(date +%Y%m%d%H%M%S)
           cd "kernel-src" 
         
@@ -117,6 +117,7 @@ jobs:
           $(echo '```')
           EEE
 
+          cat summary_content >> $GITHUB_STEP_SUMMARY
           exit "${total_error}" # 有错误则步骤失败
           
 

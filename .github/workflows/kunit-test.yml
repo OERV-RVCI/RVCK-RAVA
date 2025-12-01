@@ -61,6 +61,7 @@ jobs:
       - name: run kunit test
         id: run-kunit-test
         if: ${{ !cancelled() }}
+        shell: bash
         run: |
           cd kernel-src
           make distclean
@@ -70,7 +71,7 @@ jobs:
           
           summary_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}/#summary-${{ job.check_run_id }}"
 
-          cat >> summary << EEE
+          cat >> summary <<- EEE
           ## Kunit Test Result
           
           $result

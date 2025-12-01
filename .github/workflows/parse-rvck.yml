@@ -37,12 +37,27 @@ on:
       testcase_repo:
         description: lava 仓库地址
         value: ${{ jobs.parse-request.outputs.testcase_repo }}
-      lava_template:
-        description: lava测试模板
-        value: ${{ jobs.parse-request.outputs.lava_template }}
       testcase_path:
         description: lava 需要执行的用例yaml 文件路径
         value: ${{ jobs.parse-request.outputs.testcase_path }}
+      lava_hardware:
+        description: 需要执行lava的硬件
+        value: ${{ jobs.parse-request.outputs.lava_hardware }}
+      ltp_testsuite:
+        description: ltp 测试类型
+        value: ${{ jobs.parse-request.outputs.ltp_testsuite }}
+      lava_template_qemu:
+        description: lava qemu 测试模板
+        value: ${{ jobs.parse-request.outputs.lava_template_qemu }}
+      lava_template_sg2042:
+        description: lava sg2042 测试模板
+        value: ${{ jobs.parse-request.outputs.lava_template_sg2042 }}
+      lava_template_k1:
+        description: lava k1 测试模板
+        value: ${{ jobs.parse-request.outputs.lava_template_k1 }}
+      lava_template_lpi4a:
+        description: lava lpi4a 测试模板
+        value: ${{ jobs.parse-request.outputs.lava_template_lpi4a }}
 
    
 jobs:
@@ -56,8 +71,13 @@ jobs:
       COMMIT_URL: ${{ steps.parse-request.outputs.COMMIT_URL }}
       NEED_RUN_JOB: ${{ steps.parse-request.outputs.NEED_RUN_JOB }}
       testcase_repo: ${{ steps.parse-request.outputs.testcase_repo }}
-      lava_template: ${{ steps.parse-request.outputs.lava_template }}
+      lava_template_qemu: ${{ steps.parse-request.outputs.lava_template_qemu }}
+      lava_template_sg2042: ${{ steps.parse-request.outputs.lava_template_sg2042 }}
+      lava_template_k1: ${{ steps.parse-request.outputs.lava_template_k1 }}
+      lava_template_lpi4a: ${{ steps.parse-request.outputs.lava_template_lpi4a }}
       testcase_path: ${{ steps.parse-request.outputs.testcase_path }}
+      lava_hardware: ${{ steps.parse-request.outputs.lava_hardware }}
+      ltp_testsuite: ${{ steps.parse-request.outputs.ltp_testsuite }}
     env:
       GH_TOKEN: ${{ github.token }}
       x_github_event: ${{ inputs.x_github_event }}
@@ -80,7 +100,12 @@ jobs:
 
           import json
           import os
-
+          
+          DEFAULT_testcase_path = "lava-testcases/common-test/ltp/ltp.yaml"
+          
+          lava_hardware_testcase_map = ${{ vars.RVCKCI_DEFAULT_CASE }}
+          
+          DEFAULT_lava_hardware = ${{ vars.RAVA_SUPPORT_DEVICE }}
 
           def write_properties_file(info: dict):
               for k, v in info.items():
@@ -106,7 +131,7 @@ jobs:
                       str(i).split('=',maxsplit=1)
                   for i in shlex.split(comment.strip()[6:])]
               }
-              for k in ['lava_template','testcase_path', 'fetch', 'job']:
+              for k in ['lava_hardware', 'testcase_path', 'fetch', 'job', 'ltp_testsuite']:
                   if k in data:
                       res[k] = data.pop(k)
 
@@ -150,6 +175,18 @@ jobs:
                   res["FETCH_REF"] = res.pop("fetch")
                   res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/commit/{res["FETCH_REF"]}'
               
+              ## lava info
+              res.setdefault("testcase_path", DEFAULT_testcase_path)
+              if "lava_hardware" in res:
+                  res["lava_hardware"] = [i.strip() for i in res["lava_hardware"].split(",") if i.strip()]
+              if 'lava_hardware' not in res or not res["lava_hardware"]:
+                  res["lava_hardware"] = DEFAULT_lava_hardware
+              for hardware in res["lava_hardware"]:
+                  if hardware not in DEFAULT_lava_hardware:
+                      print(f"lava hardware {hardware} not in default support list, ignore")
+                      continue
+                  res[f"lava_template_{hardware}"] = lava_hardware_testcase_map.get(hardware, {}).get(res['testcase_path'], '')
+
               write_properties_file(res)
 
 
@@ -223,16 +260,13 @@ jobs:
           echo "COMMIT_URL=$(cat COMMIT_URL)" >> $GITHUB_OUTPUT
           echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_OUTPUT
           echo "testcase_repo=$(cat testcase_repo || echo 'RVCK-Project/lavaci')" >> $GITHUB_OUTPUT
-          echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_OUTPUT
-          echo "testcase_path=$(cat testcase_path || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_OUTPUT
+          echo "lava_hardware=$(cat lava_hardware || echo '')" >> $GITHUB_OUTPUT
+          for f in lava_template_*; do
+                [ ! -f "$f" ] && continue
+                echo "$f=$(cat "$f")" >> $GITHUB_OUTPUT
+          done
 
-          echo "REPO=$(cat REPO)" >> $GITHUB_ENV
-          echo "FETCH_REF=$(cat FETCH_REF)" >> $GITHUB_ENV
-          echo "SRC_REF=$(cat SRC_REF)" >> $GITHUB_ENV
-          echo "ISSUE_ID=$(cat ISSUE_ID)" >> $GITHUB_ENV
-          echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_ENV
-          echo "testcase_repo=$(cat testcase_repo || echo 'https://github.com/RVCK-Project/lavaci.git')" >> $GITHUB_ENV
-          echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_ENV
-          echo "testcase_path=$(cat testcase_path || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_ENV
+          echo "testcase_path=$(cat testcase_path || echo '')" >> $GITHUB_OUTPUT
+          echo "ltp_testsuite=$(cat ltp_testsuite || echo 'math')" >> $GITHUB_OUTPUT
           
 

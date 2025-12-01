@@ -7,27 +7,23 @@ on:
         value: ${{ jobs.collect-summary.outputs.summary_content }}
 
     inputs:
-      kernel_download_url:
-        description: '内核下载链接'
+      kernel_files_url:
+        description: '内核文件夹链接'
         type: string
         required: true
+
       kernel_md5sum:
         description: '内核md5sum'
         type: string
         required: false
-
-      rootfs_download_url:
-        description: 'rootfs下载链接'
-        required: false
-        type: string
-
-      initramfs_download_url:
-        description: 'initramfs下载链接'
-        required: false
-        type: string
       
       initramfs_md5sum:
         description: 'initramfs md5sum'
+        required: false
+        type: string
+
+      rootfs_download_url:
+        description: 'rootfs下载链接'
         required: false
         type: string
 
@@ -44,30 +40,33 @@ on:
 
       lava_template:
         description: 'lava测试模板'
-        required: true
+        required: false
         type: string
 
       testcase_path:
         description: '需要执行的用例yaml 文件路径'
         required: true
         type: string
-
-      # testcase_params:
-      #   description: '测试用例参数,[key=value ...]'
-      #   type: string
-      #   required: false
+      
+      ltp_testsuite:
+        description: 'ltp 测试类型'
+        required: false
+        type: string
+        default: 'math'
     
     secrets:
       lava_token:
         required: true
 
 env:
+  kernel_files_url: ${{ inputs.kernel_files_url }}
+  kernel_download_url: ${{ inputs.kernel_files_url }}/Image
+  initramfs_download_url: ${{ inputs.kernel_files_url }}/initramfs.img
   testcase_repo: ${{ inputs.testcase_repo }}
   testcase_ref: ${{ inputs.testcase_ref }}
-  kernel_download_url: ${{ inputs.kernel_download_url }}
-  initramfs_download_url: ${{ inputs.initramfs_download_url }}
   lava_template: ${{ inputs.lava_template }}
   testcase_path: ${{ inputs.testcase_path }}
+  ltp_testsuite: ${{ inputs.ltp_testsuite }}
   lava_server: lava.oerv.ac.cn
   lava_admin_token: ${{ secrets.lava_token }}
   
@@ -100,14 +99,21 @@ jobs:
           input_rootfs_download_url: ${{ inputs.rootfs_download_url }}
           input_kernel_md5sum: ${{ inputs.kernel_md5sum }}
           input_initramfs_md5sum: ${{ inputs.initramfs_md5sum }}
+        shell: bash
         run: |
+          set -x
           echo "ssh_port=$(od -An -N2 -i /dev/urandom | awk -v min=10000 -v max=20000 '{print min + ($1 % (max - min + 1))}')" >> $GITHUB_OUTPUT
+          
           repo_name=${github_repo#*/}
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+
           job_name="${github_repo/\//_}_${event_name}_${issue_id:-"$(date +"%Y%m%d")"}_${comment_id:+_$comment_id}"
           echo "job_name=$job_name" >> $GITHUB_OUTPUT
+
           device_type="$(yq -r .device_type "$lava_template")"
+
           echo "testitem_name=${job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_${device_type}" >> $GITHUB_OUTPUT
+          
           rootfs_download_url="${input_rootfs_download_url}"
           if [ -z "$rootfs_download_url" ]; then
             if [ "$device_type" = qemu ]; then
@@ -116,19 +122,27 @@ jobs:
               rootfs_download_url="https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/openEuler24.03-LTS-SP1/openeuler-rootfs.tar.gz"
             fi
           fi
+          echo "rootfs_download_url=$rootfs_download_url" >> $GITHUB_OUTPUT
 
           kernel_md5sum="$input_kernel_md5sum"
           if [ -z "$kernel_md5sum" ]; then
               kernel_md5sum=$(curl "${kernel_download_url}.md5sum" 2>/dev/null | awk '{print $1}' || echo "")
           fi
+          echo "kernel_md5sum=$kernel_md5sum" >> $GITHUB_OUTPUT
+
           initramfs_md5sum="$input_initramfs_md5sum"
           if [ -z "$initramfs_md5sum" ]; then
               initramfs_md5sum=$(curl "${initramfs_download_url}.md5sum" 2>/dev/null | awk '{print $1}' || echo "")
           fi
-
-          echo "rootfs_download_url=$rootfs_download_url" >> $GITHUB_OUTPUT
-          echo "kernel_md5sum=$kernel_md5sum" >> $GITHUB_OUTPUT
           echo "initramfs_md5sum=$initramfs_md5sum" >> $GITHUB_OUTPUT
+          
+          declare -A dtb_map=(
+            ["sg2042"]="${kernel_files_url}/lib/dtbs/sophgo/mango-milkv-pioneer.dtb"
+            ["spacemit-k1-bananapi-f3"]="${kernel_files_url}/lib/dtbs/spacemit/k1-bananapi-f3.dtb"
+            ["lpi4a"]="${kernel_files_url}/lib/dtbs/thead/th1520-lichee-pi-4a.dtb"
+            ["qemu"]=""
+          )
+          echo "dtb_url=${dtb_map[${device_type}]:-"UNKNOWN_DEVICE_TYPE"}" >> $GITHUB_OUTPUT
 
       - name: setup_lava_template
         shell: python3 {0}
@@ -137,6 +151,9 @@ jobs:
           job_name: ${{ steps.gen_var.outputs.job_name }}
           testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
           rootfs_download_url: ${{ steps.gen_var.outputs.rootfs_download_url }}
+          kernel_md5sum: ${{ steps.gen_var.outputs.kernel_md5sum }}
+          initramfs_md5sum: ${{ steps.gen_var.outputs.initramfs_md5sum }}
+          dtb_url: ${{ steps.gen_var.outputs.dtb_url }}
           repo_name: ${{ steps.gen_var.outputs.repo_name }}
         run: |
           import yaml
@@ -152,6 +169,8 @@ jobs:
 
           testcase_path = os.getenv("testcase_path")
           assert testcase_path, "Testcase URL is not set"
+
+          ltp_testsuite = os.getenv("ltp_testsuite", "")
 
           job_name = os.getenv("job_name")
           assert job_name, "Job name is not set"
@@ -174,9 +193,12 @@ jobs:
           assert repo_name, "repo name is not set"
 
           initramfs_download_url = os.getenv("initramfs_download_url")
-          assert initramfs_download_url, "Initramfs download URL is not set"
+          assert initramfs_download_url, "initramfs download URL is not set"
 
-          initramfs_md5sum = os.getenv("initramfs_md5sum")
+          initramfs_md5sum = os.getenv("initramfs_md5sum", "")
+          
+          # 硬件设备需要dtb
+          dtb_url = os.getenv("dtb_url", "")
 
           content = open(lava_template, "r").read()\
                     .replace("${job_name}", job_name)\
@@ -184,29 +206,57 @@ jobs:
                     .replace("${rootfs_image_url}", rootfs_download_url)\
                     .replace("${testcase_repo}", f"https://github.com/{testcase_repo}.git")\
                     .replace("${testitem_name}", testitem_name)\
-                    .replace("${testcase_path}", testcase_path)
+                    .replace("${testcase_path}", testcase_path)\
+                    .replace("${ltp_testsuite}", ltp_testsuite)\
+                    .replace("${dtb_url}", dtb_url)\
+                    .replace("${ramdisk_url}", initramfs_download_url)
 
           data = yaml.safe_load(content)
 
           # qemu 需要设置ssh port
           if data['device_type'] == 'qemu' and 'context' in data and 'extra_options' in data['context']:
               data['context']['extra_options'] = [i.replace('hostfwd=tcp::10001-:22', f'hostfwd=tcp::{ssh_port}-:22') for i in list(data['context']['extra_options'])]
+          
+          def get_action_by_name(name):
+              for action in data['actions']:
+                  if name in action:
+                      return action[name]
+              return None
+          
+          deploy_action = get_action_by_name('deploy')
 
           # add kernel md5sum
           if kernel_md5sum:
-              data['actions'][0]['deploy']['images']['kernel']['md5sum'] = kernel_md5sum
+              if data['device_type'] == 'qemu':
+                  deploy_action['images']['kernel']['md5sum'] = kernel_md5sum
+              else:
+                  deploy_action['kernel']['md5sum'] = kernel_md5sum
 
           # rvck 需要initramfs
           if repo_name == "rvck":
               data['context']['extra_options'] = [i.replace('root=/dev/vda', 'root=/dev/vdb') for i in list(data['context']['extra_options'])]
-              data['actions'][0]['deploy']['images']['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
+              if data['device_type'] == 'qemu':
+                  deploy_action['images']['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
+              else:
+                  deploy_action['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
+
               if initramfs_md5sum:
-                  data['actions'][0]['deploy']['images']['initrd']['md5sum'] = initramfs_md5sum
+                  if data['device_type'] == 'qemu':
+                      deploy_action['images']['initrd']['md5sum'] = initramfs_md5sum
+                  else:
+                      deploy_action['initrd']['md5sum'] = initramfs_md5sum
 
+          test_action = get_action_by_name('test')
           if len(testcase_ref):
-              data['actions'][2]['test']['definitions'][0]['revision'] = testcase_ref
+              test_action['definitions'][0]['revision'] = testcase_ref
 
-          data['actions'][2]['test']['definitions'][0].pop('parameters', None)
+          params = test_action['definitions'][0].pop('parameters', {})
+          for k in list(params.keys()):
+              if params[k].startswith("${"):
+                  params.pop(k)
+          if params:
+              test_action['definitions'][0]['parameters'] = params
+          
 
           with open(lava_template, 'w') as f:
               f.write(yaml.dump(data, sort_keys=False))
