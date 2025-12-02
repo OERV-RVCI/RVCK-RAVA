@@ -40,7 +40,7 @@ on:
 
       lava_template:
         description: 'lava测试模板'
-        required: true
+        required: false
         type: string
 
       testcase_path:
@@ -94,6 +94,7 @@ jobs:
           input_initramfs_md5sum: ${{ inputs.initramfs_md5sum }}
         shell: bash
         run: |
+          set -x
           echo "ssh_port=$(od -An -N2 -i /dev/urandom | awk -v min=10000 -v max=20000 '{print min + ($1 % (max - min + 1))}')" >> $GITHUB_OUTPUT
           
           repo_name=${github_repo#*/}
@@ -227,8 +228,6 @@ jobs:
 
       - name: run lava check
         id: run_lava_check
-#        env:
-#          job_name: ${{ steps.gen_var.outputs.job_name }}
         shell: bash
         run: |
           echo "=========== edited lava template ==========="
