@@ -206,22 +206,41 @@ jobs:
           # qemu 需要设置ssh port
           if data['device_type'] == 'qemu' and 'context' in data and 'extra_options' in data['context']:
               data['context']['extra_options'] = [i.replace('hostfwd=tcp::10001-:22', f'hostfwd=tcp::{ssh_port}-:22') for i in list(data['context']['extra_options'])]
+          
+          def get_action_by_name(name):
+              for action in data['actions']:
+                  if name in action:
+                      return action[name]
+              return None
+          
+          deploy_action = get_action_by_name('deploy')
 
           # add kernel md5sum
           if kernel_md5sum:
-              data['actions'][0]['deploy']['images']['kernel']['md5sum'] = kernel_md5sum
+              if data['device_type'] == 'qemu':
+                  deploy_action['images']['kernel']['md5sum'] = kernel_md5sum
+              else:
+                  deploy_action['kernel']['md5sum'] = kernel_md5sum
 
           # rvck 需要initramfs
           if repo_name == "rvck":
               data['context']['extra_options'] = [i.replace('root=/dev/vda', 'root=/dev/vdb') for i in list(data['context']['extra_options'])]
-              data['actions'][0]['deploy']['images']['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
+              if data['device_type'] == 'qemu':
+                  deploy_action['images']['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
+              else:
+                  deploy_action['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
+
               if initramfs_md5sum:
-                  data['actions'][0]['deploy']['images']['initrd']['md5sum'] = initramfs_md5sum
+                  if data['device_type'] == 'qemu':
+                      deploy_action['images']['initrd']['md5sum'] = initramfs_md5sum
+                  else:
+                      deploy_action['initrd']['md5sum'] = initramfs_md5sum
 
+          test_action = get_action_by_name('test')
           if len(testcase_ref):
-              data['actions'][2]['test']['definitions'][0]['revision'] = testcase_ref
+              test_action['definitions'][0]['revision'] = testcase_ref
 
-          data['actions'][2]['test']['definitions'][0].pop('parameters', None)
+          test_action['definitions'][0].pop('parameters', None)
 
           with open(lava_template, 'w') as f:
               f.write(yaml.dump(data, sort_keys=False))
