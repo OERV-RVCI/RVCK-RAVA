@@ -47,6 +47,12 @@ on:
         description: '需要执行的用例yaml 文件路径'
         required: true
         type: string
+      
+      ltp_testsuite:
+        description: 'ltp 测试类型'
+        required: false
+        type: string
+        default: 'math'
     
     secrets:
       lava_token:
@@ -60,6 +66,7 @@ env:
   testcase_ref: ${{ inputs.testcase_ref }}
   lava_template: ${{ inputs.lava_template }}
   testcase_path: ${{ inputs.testcase_path }}
+  ltp_testsuite: ${{ inputs.ltp_testsuite }}
   lava_server: lava.oerv.ac.cn
   lava_admin_token: ${{ secrets.lava_token }}
   
@@ -163,6 +170,8 @@ jobs:
           testcase_path = os.getenv("testcase_path")
           assert testcase_path, "Testcase URL is not set"
 
+          ltp_testsuite = os.getenv("ltp_testsuite", "")
+
           job_name = os.getenv("job_name")
           assert job_name, "Job name is not set"
 
@@ -198,6 +207,7 @@ jobs:
                     .replace("${testcase_repo}", f"https://github.com/{testcase_repo}.git")\
                     .replace("${testitem_name}", testitem_name)\
                     .replace("${testcase_path}", testcase_path)\
+                    .replace("${ltp_testsuite}", ltp_testsuite)\
                     .replace("${dtb_url}", dtb_url)\
                     .replace("${ramdisk_url}", initramfs_download_url)
 
@@ -240,7 +250,13 @@ jobs:
           if len(testcase_ref):
               test_action['definitions'][0]['revision'] = testcase_ref
 
-          test_action['definitions'][0].pop('parameters', None)
+          params = test_action['definitions'][0].pop('parameters', {})
+          for k in list(params.keys()):
+              if params[k].startswith("${"):
+                  params.pop(k)
+          if params:
+              test_action['definitions'][0]['parameters'] = params
+          
 
           with open(lava_template, 'w') as f:
               f.write(yaml.dump(data, sort_keys=False))
