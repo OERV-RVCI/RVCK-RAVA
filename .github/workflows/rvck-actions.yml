@@ -61,28 +61,28 @@ jobs:
       kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
       fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
   
-  kernel-build:
-    runs-on: 'ubuntu-latest'
-    outputs:
-      kernel_files_url: ${{ steps.kernel-output.outputs.kernel_files_url }}
-      summary_content: ${{ steps.kernel-output.outputs.kernel_files_url }}
-    needs: [parse-request]
-    if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'kernel-build') }}
-    steps:
-      - id: kernel-output
-        run: |
-          echo "kernel_files_url=https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/rvck-olk/latest" >> $GITHUB_OUTPUT
-          echo "summary_content=**skiped**" >> $GITHUB_OUTPUT
-
   # kernel-build:
+  #   runs-on: 'ubuntu-latest'
+  #   outputs:
+  #     kernel_files_url: ${{ steps.kernel-output.outputs.kernel_files_url }}
+  #     summary_content: ${{ steps.kernel-output.outputs.kernel_files_url }}
   #   needs: [parse-request]
   #   if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'kernel-build') }}
-  #   uses: ./.github/workflows/kernel-build.yml
-  #   with:
-  #     commit_url: ${{ needs.parse-request.outputs.COMMIT_URL }}
-  #     upload_dir: ${{ github.repository }}/${{ github.event.comment.id && format('{0}_{1}', needs.parse-request.outputs.ISSUE_ID, github.event.comment.id) || needs.parse-request.outputs.ISSUE_ID }}
-  #   secrets:
-  #     rync_passphrase: ${{ secrets.RSYNC_PASSPHRASE }}
+  #   steps:
+  #     - id: kernel-output
+  #       run: |
+  #         echo "kernel_files_url=https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/rvck-olk/latest" >> $GITHUB_OUTPUT
+  #         echo "summary_content=**skiped**" >> $GITHUB_OUTPUT
+
+  kernel-build:
+    needs: [parse-request]
+    if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'kernel-build') }}
+    uses: ./.github/workflows/kernel-build.yml
+    with:
+      commit_url: ${{ needs.parse-request.outputs.COMMIT_URL }}
+      upload_dir: ${{ github.repository }}/${{ github.event.comment.id && format('{0}_{1}', needs.parse-request.outputs.ISSUE_ID, github.event.comment.id) || needs.parse-request.outputs.ISSUE_ID }}
+    secrets:
+      rync_passphrase: ${{ secrets.RSYNC_PASSPHRASE }}
 
       
   lava-trigger:
