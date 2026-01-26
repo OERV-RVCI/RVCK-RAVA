@@ -17,10 +17,8 @@ on:
         description: '上传目录'
 
     outputs:
-      kernel_download_url:
-        value: ${{ jobs.kernel-build.outputs.kernel_download_url }}
-      initramfs_download_url:
-        value: ${{ jobs.kernel-build.outputs.initramfs_download_url }}
+      kernel_files_url:
+        value: ${{ jobs.kernel-build.outputs.kernel_files_url }}
       kernel_md5sum:
         value: ${{ jobs.kernel-build.outputs.kernel_md5sum }}
       initramfs_md5sum:

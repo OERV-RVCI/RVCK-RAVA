@@ -33,7 +33,7 @@ jobs:
         env:
           REPO: ${{ inputs.kernel_src_repo }}
           fetch_ref: ${{ inputs.fetch_ref }}
-        shell: bash
+        shell: bash -ex
         run: |
           rm -rf kernel-src || true
         
@@ -61,10 +61,12 @@ jobs:
       - name: run kunit test
         id: run-kunit-test
         if: ${{ !cancelled() }}
+        shell: bash
         run: |
           cd kernel-src
           make distclean
           git checkout .
+          set -ex
           ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- ./tools/testing/kunit/kunit.py run --arch=riscv > kunit.log 2>&1 || true
           result="$(grep 'Testing complete' kunit.log || echo "kunit test failed")"
 
