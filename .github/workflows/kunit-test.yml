@@ -33,7 +33,7 @@ jobs:
         env:
           REPO: ${{ inputs.kernel_src_repo }}
           fetch_ref: ${{ inputs.fetch_ref }}
-        shell: bash -ex
+        shell: bash
         run: |
           rm -rf kernel-src || true
         
@@ -70,25 +70,24 @@ jobs:
           ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- ./tools/testing/kunit/kunit.py run --arch=riscv > kunit.log 2>&1 || true
           result="$(grep 'Testing complete' kunit.log || echo "kunit test failed")"
 
-          cat >> summary << EEE
+          cat >> summary <<- EEE
           ## Kunit Test Result
           
-          $result
+          <details>
+
+          <sumary> $result </sumary>
+
+          \`\`\`log
+          $(cat kunit.log)
+          \`\`\`
+          </details>
           EEE
 
           echo "sumary_content<<EOF" >> $GITHUB_OUTPUT
           cat summary >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           
-          cat > $GITHUB_STEP_SUMMARY <<- EEE
-          $(cat summary)
-
-          ### Kunit Test Log
-          
-          $(echo '```bash')
-          $(cat kunit.log)
-          $(echo '```')
-          EEE
+          cat summary >> $GITHUB_STEP_SUMMARY
 
           grep -q 'Testing complete' kunit.log # 设置步骤结果为失败或成功
           

@@ -92,16 +92,14 @@ jobs:
           else
             result="Kernel build failed."
           fi
-
-          cat > summary << EEE
-          ## Kernel Build Result
-          
-          $result
-          
-          $(cat "${kernel_result_dir}"/*/*.md5sum)
-
-          EEE
-
+          {
+            echo "## Kernel Build Result"
+            echo ""
+            echo "- $result"
+            cat "${kernel_result_dir}"/*/*.md5sum 2>/dev/null | while read -r l; do
+                echo "- $l"
+            done
+          } | tee summary
           cat summary > $GITHUB_STEP_SUMMARY
           
           echo "summary_content<<EOF" >> $GITHUB_OUTPUT

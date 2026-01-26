@@ -185,12 +185,9 @@ jobs:
       event_id: ${{ needs.pre-check.outputs.event_id }}
       append_content: |
         **测试完成**
-        <details>
-        
+        <details>  
         <summary> 详细结果:</summary>
         
-        # RVCK result
-
         | check | result |
         | :-: | :-: |
         |kunit-test| ${{ needs.kunit-test.result }} |
