@@ -76,7 +76,8 @@ jobs:
         run: |
           
           rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
-          echo "kernel_files_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
+          echo "kernel_files_domain_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
+          echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
           echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
       
@@ -84,11 +85,12 @@ jobs:
         if: ${{ !cancelled() }}
         id: summary
         env:
+          kernel_files_domain_url: ${{ steps.publish-kernel.outputs.kernel_files_domain_url }}
           kernel_files_url: ${{ steps.publish-kernel.outputs.kernel_files_url }}
           upload_dir: ${{ inputs.upload_dir }}
         run: |
           if [ "$kernel_files_url" != "" ]; then
-            result="Kernel build succeeded: [${upload_dir}]($kernel_files_url)/"
+            result="Kernel build succeeded: [${upload_dir}]($kernel_files_domain_url)/"
           else
             result="Kernel build failed."
           fi
