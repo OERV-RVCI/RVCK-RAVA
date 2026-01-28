@@ -46,6 +46,9 @@ on:
       ltp_testsuite:
         description: ltp 测试类型
         value: ${{ jobs.parse-request.outputs.ltp_testsuite }}
+      update_latest:
+        description: 是否在构建成功后刷新内核latest软链
+        value: ${{ jobs.parse-request.outputs.update_latest == 'true' }}
 
    
 jobs:
@@ -62,6 +65,7 @@ jobs:
       lava_template: ${{ steps.parse-request.outputs.lava_template }}
       testcase_path: ${{ steps.parse-request.outputs.testcase_path }}
       ltp_testsuite: ${{ steps.parse-request.outputs.ltp_testsuite }}
+      update_latest: ${{ steps.parse-request.outputs.update_latest }}
     env:
       GH_TOKEN: ${{ github.token }}
       x_github_event: ${{ inputs.x_github_event }}
@@ -108,7 +112,7 @@ jobs:
                       str(i).split('=',maxsplit=1)
                   for i in shlex.split(comment.strip()[6:])]
               }
-              for k in ['lava_template','testcase_path', 'fetch', 'job', 'ltp_testsuite']:
+              for k in ['lava_template','testcase_path', 'fetch', 'job', 'ltp_testsuite', 'update_latest']:
                   if k in data:
                       res[k] = data.pop(k)
 
@@ -228,5 +232,6 @@ jobs:
           echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_OUTPUT
           echo "testcase_path=$(cat testcase_path || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_OUTPUT
           echo "ltp_testsuite=$(cat ltp_testsuite || echo 'math')" >> $GITHUB_OUTPUT
+          echo "update_latest=$(cat update_latest || echo false)" >> $GITHUB_OUTPUT
           
 

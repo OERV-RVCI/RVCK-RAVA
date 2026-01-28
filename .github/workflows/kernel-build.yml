@@ -10,11 +10,17 @@ on:
           内核源码仓库commit链接, 如: 
             - https://github.com/RVCK-Project/rvck/commit/32c7ba2136024ee1563416607e3265ccbee6a55e
             - https://github.com/RVCK-Project/rvck-olk/pull/103
-      
       upload_dir:
         type: string
         required: true
         description: '上传目录'
+      update_latest:
+        type: boolean
+        default: false
+        description: |
+          是否刷新latest软链:
+            - rvck latest: https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/rvck/latest/
+            - rvck-olk latest: https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/rvck-olk/latest/
 
     outputs:
       kernel_files_url:
@@ -74,12 +80,16 @@ jobs:
         env:
           RSYNC_PASSWORD: ${{ secrets.rync_passphrase }}
         run: |
-          
+          set -x
           rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
           echo "kernel_files_domain_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
           echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
+          if [ "${{ inputs.update_latest }}" = true ]; then
+              ln -s "../${{ inputs.upload_dir }}" latest
+              rsync -av --progress --mkpath latest rvck@10.30.190.110::RVCK/"$(echo "${{ inputs.commit_url }}" | awk -F'/' '{print $5}')/"
+          fi
       
       - name: summary
         if: ${{ !cancelled() }}
