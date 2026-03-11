@@ -45,7 +45,7 @@ jobs:
     steps:
       - name: show-info
         run: |
-          cat > $GITHUB_STEP_SUMMARY << EEE
+          cat << EEE
           | input | value |
           |:-:|:-:|
           |repo| $GH_REPO |

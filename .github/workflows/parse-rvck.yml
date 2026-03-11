@@ -43,6 +43,9 @@ on:
       testcase_path:
         description: lava 需要执行的用例yaml 文件路径
         value: ${{ jobs.parse-request.outputs.testcase_path }}
+      ltp_testsuite:
+        description: ltp 测试类型
+        value: ${{ jobs.parse-request.outputs.ltp_testsuite }}
 
    
 jobs:
@@ -58,6 +61,7 @@ jobs:
       testcase_repo: ${{ steps.parse-request.outputs.testcase_repo }}
       lava_template: ${{ steps.parse-request.outputs.lava_template }}
       testcase_path: ${{ steps.parse-request.outputs.testcase_path }}
+      ltp_testsuite: ${{ steps.parse-request.outputs.ltp_testsuite }}
     env:
       GH_TOKEN: ${{ github.token }}
       x_github_event: ${{ inputs.x_github_event }}
@@ -104,7 +108,7 @@ jobs:
                       str(i).split('=',maxsplit=1)
                   for i in shlex.split(comment.strip()[6:])]
               }
-              for k in ['lava_template','testcase_path', 'fetch', 'job']:
+              for k in ['lava_template','testcase_path', 'fetch', 'job', 'ltp_testsuite']:
                   if k in data:
                       res[k] = data.pop(k)
 
@@ -223,14 +227,6 @@ jobs:
           echo "testcase_repo=$(cat testcase_repo || echo 'RVCK-Project/lavaci')" >> $GITHUB_OUTPUT
           echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_OUTPUT
           echo "testcase_path=$(cat testcase_path || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_OUTPUT
-
-          echo "REPO=$(cat REPO)" >> $GITHUB_ENV
-          echo "FETCH_REF=$(cat FETCH_REF)" >> $GITHUB_ENV
-          echo "SRC_REF=$(cat SRC_REF)" >> $GITHUB_ENV
-          echo "ISSUE_ID=$(cat ISSUE_ID)" >> $GITHUB_ENV
-          echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_ENV
-          echo "testcase_repo=$(cat testcase_repo || echo 'https://github.com/RVCK-Project/lavaci.git')" >> $GITHUB_ENV
-          echo "lava_template=$(cat lava_template || echo 'lava-job-template/qemu/qemu-ltp.yaml')" >> $GITHUB_ENV
-          echo "testcase_path=$(cat testcase_path || echo 'lava-testcases/common-test/ltp/ltp.yaml')" >> $GITHUB_ENV
+          echo "ltp_testsuite=$(cat ltp_testsuite || echo 'math')" >> $GITHUB_OUTPUT
           
 
