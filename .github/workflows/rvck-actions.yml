@@ -61,6 +61,19 @@ jobs:
       kernel_src_repo: ${{ needs.parse-request.outputs.REPO }}
       fetch_ref: ${{ needs.parse-request.outputs.FETCH_REF }}
   
+  # kernel-build:
+  #   runs-on: 'ubuntu-latest'
+  #   outputs:
+  #     kernel_files_url: ${{ steps.kernel-output.outputs.kernel_files_url }}
+  #     summary_content: ${{ steps.kernel-output.outputs.kernel_files_url }}
+  #   needs: [parse-request]
+  #   if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'kernel-build') }}
+  #   steps:
+  #     - id: kernel-output
+  #       run: |
+  #         echo "kernel_files_url=https://fast-mirror.isrc.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/RVCK/OERV-RVCI/rvck-olk/latest" >> $GITHUB_OUTPUT
+  #         echo "summary_content=**skiped**" >> $GITHUB_OUTPUT
+
   kernel-build:
     needs: [parse-request]
     if: ${{ needs.parse-request.outputs.REPO && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'kernel-build') }}
@@ -68,24 +81,85 @@ jobs:
     with:
       commit_url: ${{ needs.parse-request.outputs.COMMIT_URL }}
       upload_dir: ${{ github.repository }}/${{ github.event.comment.id && format('{0}_{1}', needs.parse-request.outputs.ISSUE_ID, github.event.comment.id) || needs.parse-request.outputs.ISSUE_ID }}
+      update_latest: ${{ needs.parse-request.outputs.update_latest == 'true' }}
     secrets:
       rync_passphrase: ${{ secrets.RSYNC_PASSPHRASE }}
 
       
   lava-trigger:
     needs: [parse-request, kernel-build]
+    if: ${{ contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') && needs.parse-request.outputs.lava_template }}
     uses: ./.github/workflows/lava-trigger.yml
-    if: ${{ contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') }}
     secrets: 
       lava_token: ${{ secrets.LAVA_TOKEN }}
     with:
       testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
       testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
-      kernel_download_url: ${{ needs.kernel-build.outputs.kernel_download_url }}
-      initramfs_download_url: ${{ needs.kernel-build.outputs.initramfs_download_url }}
+      kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
       kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
       initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
+  
+  lava-trigger-qemu:
+    needs: [parse-request, kernel-build]
+    if: ${{ contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') && !needs.parse-request.outputs.lava_template }}
+    uses: ./.github/workflows/lava-trigger.yml
+    secrets: 
+      lava_token: ${{ secrets.LAVA_TOKEN }}
+    with:
+      testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
+      lava_template: 'lava-job-template/qemu/qemu-ltp.yaml'
+      testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
+      kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
+      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
+
+  lava-trigger-sg2042:
+    needs: [parse-request, kernel-build]
+    if: ${{ contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') && !needs.parse-request.outputs.lava_template }}
+    uses: ./.github/workflows/lava-trigger.yml
+    secrets: 
+      lava_token: ${{ secrets.LAVA_TOKEN }}
+    with:
+      testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
+      lava_template: 'lava-job-template/sg2042/sg2042-ltp.yaml'
+      testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
+      kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
+      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
+  
+  lava-trigger-k1:
+    needs: [parse-request, kernel-build]
+    if: ${{ contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') && !needs.parse-request.outputs.lava_template }}
+    uses: ./.github/workflows/lava-trigger.yml
+    secrets: 
+      lava_token: ${{ secrets.LAVA_TOKEN }}
+    with:
+      testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
+      lava_template: 'lava-job-template/spacemit-k1-bananapi-f3/k1-bpif3-ltp.yaml'
+      testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
+      kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
+      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
+
+  lava-trigger-lpi4a:
+    needs: [parse-request, kernel-build]
+    if: ${{ contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') && !needs.parse-request.outputs.lava_template }}
+    uses: ./.github/workflows/lava-trigger.yml
+    secrets: 
+      lava_token: ${{ secrets.LAVA_TOKEN }}
+    with:
+      testcase_repo: ${{ needs.parse-request.outputs.testcase_repo }}
+      lava_template: 'lava-job-template/lpi4a/lpi4a-ltp.yaml'
+      testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
+      kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
+      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
 
   check-patch:
     needs: [parse-request]
@@ -99,7 +173,7 @@ jobs:
   
   collect-result:
     if: ${{ !cancelled() && needs.parse-request.outputs.REPO }}
-    needs: [parse-request, pre-check, kunit-test, kernel-build, lava-trigger, check-patch]
+    needs: [parse-request, pre-check, kunit-test, kernel-build, lava-trigger, lava-trigger-qemu, lava-trigger-sg2042, lava-trigger-k1, lava-trigger-lpi4a, check-patch]
     permissions:
       issues: write
       pull-requests: write
@@ -112,31 +186,40 @@ jobs:
       event_id: ${{ needs.pre-check.outputs.event_id }}
       append_content: |
         **测试完成**
-        <details>
-        
+        <details>  
         <summary> 详细结果:</summary>
         
-        # RVCK result
-
         | check | result |
         | :-: | :-: |
         |kunit-test| ${{ needs.kunit-test.result }} |
         |kernel-build| ${{ needs.kernel-build.result }} |
-        |lava-trigger| ${{ needs.lava-trigger.result }} |
         |check-patch| ${{ needs.check-patch.result }} |
+        |lava-trigger| ${{ needs.lava-trigger.result }} |
+        |lava-trigger-qemu| ${{ needs.lava-trigger-qemu.result }} |
+        |lava-trigger-sg2042| ${{ needs.lava-trigger-sg2042.result }} |
+        |lava-trigger-k1 | ${{ needs.lava-trigger-k1.result }} |
+        | lava-trigger-lpi4a | ${{ needs.lava-trigger-lpi4a.result }} |
         
         ${{ needs.kunit-test.outputs.summary_content }}
         
         ${{ needs.kernel-build.outputs.summary_content }}
 
-        ${{ needs.lava-trigger.outputs.summary_content }}
-        
         ${{ needs.check-patch.outputs.summary_content }}
+
+        ${{ needs.lava-trigger.outputs.summary_content }}
+
+        ${{ needs.lava-trigger-qemu.outputs.summary_content }}
+
+        ${{ needs.lava-trigger-sg2042.outputs.summary_content }}
+
+        ${{ needs.lava-trigger-k1.outputs.summary_content }}
+
+        ${{ needs.lava-trigger-lpi4a.outputs.summary_content }}
 
         </details>
   
   results:
-    needs: [kunit-test, kernel-build, lava-trigger, check-patch, collect-result]
+    needs: [kunit-test, kernel-build, lava-trigger, lava-trigger-qemu, lava-trigger-sg2042, lava-trigger-k1, lava-trigger-lpi4a, check-patch, collect-result]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
@@ -147,4 +230,8 @@ jobs:
           [ "${{ needs.kernel-build.result }}" != failure ] && \
           [ "${{ needs.lava-trigger.result }}" != failure ] && \
           [ "${{ needs.check-patch.result }}" != failure ] && \
-          [ "${{ needs.collect-result.result }}" != failure ]
+          [ "${{ needs.collect-result.result }}" != failure ] && \
+          [ "${{ needs.lava-trigger-qemu.result }}" != failure ] && \
+          [ "${{ needs.lava-trigger-sg2042.result }}" != failure ] && \
+          [ "${{ needs.lava-trigger-k1.result }}" != failure ] && \
+          [ "${{ needs.lava-trigger-lpi4a.result }}" != failure ]
