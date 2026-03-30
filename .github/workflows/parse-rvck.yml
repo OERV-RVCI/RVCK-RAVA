@@ -67,6 +67,7 @@ jobs:
         env:
           action_repository: ${{ github.action_repository	}}
         run: |
+          echo "github: ${{ toJson(github) }}"
           echo "action_repository: ${action_repository}"
           echo "event_type: $x_github_event"
           echo "webhook_event: ${payload}"
