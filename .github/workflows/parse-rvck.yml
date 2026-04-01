@@ -66,9 +66,9 @@ jobs:
       - name: show-info
         env:
           action_repository: ${{ github.action_repository	}}
+          show_github: ${{ toJson(github) }}
+          show_job: ${{ toJson(job) }}
         run: |
-          echo "github: ${{ toJson(github) }}"
-          echo "job: ${{ toJson(job) }}"
           echo "action_repository: ${action_repository}"
           echo "event_type: $x_github_event"
           echo "webhook_event: ${payload}"
