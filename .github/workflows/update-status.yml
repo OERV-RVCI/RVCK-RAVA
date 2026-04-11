@@ -53,9 +53,12 @@ jobs:
           |event id |$event_id |
 
           append_content:
-          \`\`\`markdown
+          
+          ---
+
           ${append_content}
-          \`\`\`
+          
+          ---
 
           EEE
    

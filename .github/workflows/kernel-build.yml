@@ -70,7 +70,7 @@ jobs:
           docker run --privileged --rm \
             -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
             hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:release \
-            guix-cross-build ${{ inputs.commit_url }}
+            guix-cross-build ${{ inputs.commit_url }} | tee "${kernel_result_dir}/build.log"
    
       - name: publish kernel
         id: publish-kernel
@@ -97,6 +97,8 @@ jobs:
             result="Kernel build failed."
           fi
 
+          summary_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}/#summary-${{ job.check_run_id }}"
+
           cat > summary << EEE
           ## Kernel Build Result
           
@@ -104,13 +106,23 @@ jobs:
           
           $(cat "${kernel_result_dir}"/*/*.md5sum)
 
+          - detail log: ${summary_url}
           EEE
 
-          cat summary > $GITHUB_STEP_SUMMARY
           
           echo "summary_content<<EOF" >> $GITHUB_OUTPUT
           cat summary >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          
+          cat summary > $GITHUB_STEP_SUMMARY
 
+          cat > $GITHUB_STEP_SUMMARY << EEE
+          $(cat summary)
+          
+          \`\`\`log
+          $(cat "${kernel_result_dir}"/build.log)
+          \`\`\`
+          EEE
+          
           [ "$kernel_url" != "" ] # 设置步骤状态
 
