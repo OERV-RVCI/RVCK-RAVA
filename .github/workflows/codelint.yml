@@ -75,9 +75,8 @@ jobs:
                 "$check_type" --list-files "$l"
                 ;;
               esac
-          done <<< $check_path > need_check_files
+          done <<< $check_path | tee need_check_files
           
-          cat need_check_files
           
           declare -A all_msg_type=()
           file_cnt=0
@@ -91,7 +90,7 @@ jobs:
               yamllint)
                 "$check_type" -f parsable "$file"
                 ;;
-            esac > parse_result
+            esac | tee parse_result
 
             declare -A msg_cnt=()
             
@@ -108,9 +107,9 @@ jobs:
             info=${info:-[ok]}
             echo "| $file | ${info%,*} |"
 
-          done < need_check_files > info_result
-
-          cat info_result
+          done < need_check_files | tee info_result
+          
+          summary_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}/#summary-${{ job.check_run_id }}"
 
           cat > summary << EEE
          
@@ -120,6 +119,7 @@ jobs:
           |:-|:-:|
           $(cat info_result)
           
+          - detail log: ${summary_url}
           EEE
 
           echo "${check_type}_result<<EOF" >> $GITHUB_OUTPUT

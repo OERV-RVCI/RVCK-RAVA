@@ -67,7 +67,7 @@ jobs:
     uses: ./.github/workflows/kernel-build.yml
     with:
       commit_url: ${{ needs.parse-request.outputs.COMMIT_URL }}
-      upload_dir: ${{ github.repository }}/${{ format('{0}_{1}_{2}', needs.parse-request.outputs.ISSUE_ID, github.event.comment.id, github.run_attempt) }}
+      upload_dir: ${{ github.repository }}/${{ format('{0}_{1}_{2}', needs.parse-request.outputs.ISSUE_ID, github.run_id, github.run_attempt) }}
     secrets:
       rync_passphrase: ${{ secrets.RSYNC_PASSPHRASE }}
 

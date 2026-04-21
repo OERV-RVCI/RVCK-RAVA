@@ -375,27 +375,29 @@ jobs:
           for st in "${!cnt_result_status[@]}"; do
             result_status_desc+="${result_status_desc:+, }$st: ${cnt_result_status[$st]}"
           done
+          
+          summary_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}/#summary-${{ job.check_run_id }}"
 
           cat > summary << EEE
           ## LAVA Check
-          
-          ### args:
-          
-          - testcase_repo: ${testcase_repo}
-          - testcase_ref: ${testcase_ref}
-          - lava_template: ${lava_template}
-          - testcase_path: ${testcase_path}
-          - testitem_name: ${testitem_name}
-          - kernel_download_url: ${kernel_download_url}
-          - initramfs_download_url: ${initramfs_download_url}
-          - rootfs_download_url: ${rootfs_download_url}
-          
-          ### result:
-          
-          $(if [ "${lava_health}" = Complete ]; then echo "Lava check done!"; else echo "Lava check fail!"; fi) lava log: https://${lava_server}/scheduler/job/${lava_jobid}
 
-          lava result count: $result_status_desc
+           | args | value |
+           |:-:|:-:|
+           | testcase_repo | ${testcase_repo} |
+           | testcase_ref | ${testcase_ref} |
+           | lava_template | ${lava_template} |
+           | testcase_path | ${testcase_path} |
+           | testitem_name | ${testitem_name} |
+           | kernel_download_url | ${kernel_download_url} |
+           | initramfs_download_url | ${initramfs_download_url} |
+           | rootfs_download_url | ${rootfs_download_url} |
+          
+          ### result: $(if [ "${lava_health}" = Complete ]; then echo "Lava check done!"; else echo "Lava check fail!"; fi)
+          
+          - lava log: https://${lava_server}/scheduler/job/${lava_jobid}
+          - lava result count: $result_status_desc
 
+          - detail log: ${summary_url}
           EEE
 
           echo "summary_content<<EOF" >> $GITHUB_OUTPUT
@@ -405,8 +407,6 @@ jobs:
           cat > $GITHUB_STEP_SUMMARY << EEE
           $(cat summary)
           
-          ### detail result:
-
           \`\`\`log
           $lava_results
           \`\`\`
