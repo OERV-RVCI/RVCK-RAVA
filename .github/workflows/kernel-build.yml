@@ -96,17 +96,16 @@ jobs:
           fi
 
           summary_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}/#summary-${{ job.check_run_id }}"
-
-          cat > summary << EEE
-          ## Kernel Build Result
-          
-          $result
-          
-          $(cat "${kernel_result_dir}"/*/*.md5sum)
-
-          - detail log: ${summary_url}
-          EEE
-
+          {
+            echo "## Kernel Build Result"
+            echo ""
+            echo "- $result"
+            cat "${kernel_result_dir}"/*/*.md5sum 2>/dev/null | while read -r l; do
+                echo "- $l"
+            done
+            echo ""
+            echo "- detail log: ${summary_url}"
+          } | tee summary
           
           echo "summary_content<<EOF" >> $GITHUB_OUTPUT
           cat summary >> $GITHUB_OUTPUT
@@ -122,5 +121,5 @@ jobs:
           \`\`\`
           EEE
           
-          [ "$kernel_url" != "" ] # 设置步骤状态
+          [ "$kernel_files_url" != "" ] # 设置步骤状态
 

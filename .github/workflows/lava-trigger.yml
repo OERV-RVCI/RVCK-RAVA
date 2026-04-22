@@ -76,6 +76,7 @@ jobs:
       lava_jobid: ${{ steps.run_lava_check.outputs.lava_jobid }}
       testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
       rootfs_download_url: ${{ steps.gen_var.outputs.rootfs_download_url }}
+      device_type: ${{ steps.gen_var.outputs.device_type }}
     runs-on: 'ubuntu-latest'
 
     steps:
@@ -111,6 +112,7 @@ jobs:
           echo "job_name=$job_name" >> $GITHUB_OUTPUT
 
           device_type="$(yq -r .device_type "$lava_template")"
+          echo "device_type=$device_type" >> $GITHUB_OUTPUT
 
           echo "testitem_name=${job_name}_$(echo "${testcase_path}" | awk -F'/' '{print $2}')_${device_type}" >> $GITHUB_OUTPUT
           
@@ -365,6 +367,7 @@ jobs:
       lava_jobid: ${{ needs.lava-trigger.outputs.lava_jobid }}
       testitem_name: ${{ needs.lava-trigger.outputs.testitem_name }}
       rootfs_download_url: ${{ needs.lava-trigger.outputs.rootfs_download_url }}
+      lava_device_type: ${{ needs.lava-trigger.outputs.device_type }}
     steps:
       - name: install depends
         run: |
@@ -429,18 +432,18 @@ jobs:
           summary_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}/#summary-${{ job.check_run_id }}"
 
           cat > summary << EEE
-          ## LAVA Check
+          ## LAVA Check ($lava_device_type)
 
            | args | value |
            |:-:|:-:|
            | testcase_repo | ${testcase_repo} |
-           | testcase_ref | ${testcase_ref} |
            | lava_template | ${lava_template} |
            | testcase_path | ${testcase_path} |
-           | testitem_name | ${testitem_name} |
            | kernel_download_url | ${kernel_download_url} |
            | initramfs_download_url | ${initramfs_download_url} |
            | rootfs_download_url | ${rootfs_download_url} |
+           | testcase_ref | ${testcase_ref} |
+           | testitem_name | ${testitem_name} |
           
           ### result: $(if [ "${lava_health}" = Complete ]; then echo "Lava check done!"; else echo "Lava check fail!"; fi)
           
