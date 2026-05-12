@@ -112,8 +112,22 @@ jobs:
                   if v is None:
                       continue
                   open(k, 'w').write(str(v))
-
-          def parse_comment(comment: str):
+          
+          def set_lava_default_value(res: dict):
+              ## lava info
+              res.setdefault("testcase_path", DEFAULT_testcase_path)
+              if "lava_hardware" in res:
+                  res["lava_hardware"] = [i.strip() for i in res["lava_hardware"].split(",") if i.strip()]
+              if 'lava_hardware' not in res or not res["lava_hardware"]:
+                  res["lava_hardware"] = DEFAULT_lava_hardware
+              for hardware in res["lava_hardware"]:
+                  if hardware not in DEFAULT_lava_hardware:
+                      print(f"lava hardware {hardware} not in default support list, ignore")
+                      continue
+                  res[f"lava_template_{hardware}"] = lava_hardware_testcase_map.get(hardware, {}).get(res['testcase_path'], '')
+              return res
+              
+          def parse_comment(comment: str, is_pr=False):
               """解析comment内容, /check"""
 
               if not comment.strip().startswith("/check"):
@@ -122,6 +136,8 @@ jobs:
               
               res = {}
               if len("/check") == len(comment.strip()):
+                  if is_pr:
+                      res = set_lava_default_value(res)
                   return res
 
               import shlex
@@ -134,7 +150,9 @@ jobs:
               for k in ['lava_hardware', 'testcase_path', 'fetch', 'job', 'ltp_testsuite']:
                   if k in data:
                       res[k] = data.pop(k)
-
+              
+              res = set_lava_default_value(res)
+              
               print("\n\n--------------------------------")
               for k, v in res.items():
                   print(f"{k} = '{v}'")
@@ -156,7 +174,7 @@ jobs:
 
               res = parse_comment(str(payload["comment"]["body"]))
 
-              if res is None:
+              if not res:
                   return
 
               res["REPO"] = payload["repository"]["clone_url"]
@@ -174,18 +192,6 @@ jobs:
 
                   res["FETCH_REF"] = res.pop("fetch")
                   res["COMMIT_URL"] = f'{payload["repository"]["html_url"]}/commit/{res["FETCH_REF"]}'
-              
-              ## lava info
-              res.setdefault("testcase_path", DEFAULT_testcase_path)
-              if "lava_hardware" in res:
-                  res["lava_hardware"] = [i.strip() for i in res["lava_hardware"].split(",") if i.strip()]
-              if 'lava_hardware' not in res or not res["lava_hardware"]:
-                  res["lava_hardware"] = DEFAULT_lava_hardware
-              for hardware in res["lava_hardware"]:
-                  if hardware not in DEFAULT_lava_hardware:
-                      print(f"lava hardware {hardware} not in default support list, ignore")
-                      continue
-                  res[f"lava_template_{hardware}"] = lava_hardware_testcase_map.get(hardware, {}).get(res['testcase_path'], '')
 
               write_properties_file(res)
 
@@ -197,8 +203,8 @@ jobs:
               
               print(f"from pr {payload['action']}")
 
-              res = parse_comment(str(payload["pull_request"]["body"]))
-              if res is None:
+              res = parse_comment(str(payload["pull_request"]["body"]), True)
+              if not res:
                   res = {}
 
               res["REPO"] = payload["repository"]["clone_url"]
