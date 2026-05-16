@@ -111,13 +111,15 @@ jobs:
           $(cat summary_content)
           
           $(echo '```log')
-          $(cat $patch_dir/checkpatch.log)
+          error:
+          $(grep -cE "ERROR" "$patch_dir/checkpatch.log")
+          warning:
+          $(grep -cE "WARNING" "$patch_dir/checkpatch.log")
           ---
           $(cat check-patch-result)
           $(echo '```')
           EEE
 
-          cat summary_content >> $GITHUB_STEP_SUMMARY
           exit "${total_error}" # 有错误则步骤失败
           
 
