@@ -131,6 +131,9 @@ jobs:
               """解析comment内容, /check"""
 
               if not comment.strip().startswith("/check"):
+                  if is_pr:
+                      return set_lava_default_value({})
+                  
                   print(comment.strip(), "| not found /check, ignore")
                   return None
               
