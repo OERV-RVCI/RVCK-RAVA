@@ -139,9 +139,7 @@ jobs:
               
               res = {}
               if len("/check") == len(comment.strip()):
-                  if is_pr:
-                      res = set_lava_default_value(res)
-                  return res
+                  return set_lava_default_value(res)
 
               import shlex
               data = {
