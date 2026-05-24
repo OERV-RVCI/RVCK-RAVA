@@ -236,8 +236,9 @@ jobs:
 
           # rvck 需要initramfs
           if repo_name == "rvck":
-              data['context']['extra_options'] = [i.replace('root=/dev/vda', 'root=/dev/vdb') for i in list(data['context']['extra_options'])]
               if data['device_type'] == 'qemu':
+                  if 'context' in data and 'extra_options' in data['context']:
+                      data['context']['extra_options'] = [i.replace('root=/dev/vda', 'root=/dev/vdb') for i in list(data['context']['extra_options'])]
                   deploy_action['images']['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
               else:
                   deploy_action['initrd'] = {'image_arg': '-initrd {initrd}', 'url': initramfs_download_url}
@@ -378,7 +379,7 @@ jobs:
         if: ${{ !needs.lava-trigger.outputs.lava_jobid }}
         run: |
           cat > summary_content <<EEE
-          ## LAVA Check
+          ## LAVA Check ($lava_device_type)
 
           ---
           ***lava 执行失败.***
