@@ -64,7 +64,7 @@ jobs:
         run: |
           
           mkdir -p "${kernel_result_dir}"
-          docker run --privileged --rm \
+          docker run --pull=always --privileged --rm \
             -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
             hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:release \
             guix-cross-build ${{ inputs.commit_url }} | tee "${kernel_result_dir}/build.log"
