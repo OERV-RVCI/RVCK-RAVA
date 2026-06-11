@@ -186,19 +186,19 @@ jobs:
 
         </details>
   
-  results:
-    needs: [kunit-test, kernel-build, lava-trigger-qemu, lava-trigger-sg2042, lava-trigger-k1, lava-trigger-lpi4a, check-patch, collect-result]
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: show final result
-        run: |
-          # 所有需要运行的job都成功则整体成功
-          [ "${{ needs.kunit-test.result }}" != failure ] && \
-          [ "${{ needs.kernel-build.result }}" != failure ] && \
-          [ "${{ needs.check-patch.result }}" != failure ] && \
-          [ "${{ needs.collect-result.result }}" != failure ] && \
-          [ "${{ needs.lava-trigger-qemu.result }}" != failure ] && \
-          [ "${{ needs.lava-trigger-sg2042.result }}" != failure ] && \
-          [ "${{ needs.lava-trigger-k1.result }}" != failure ] && \
-          [ "${{ needs.lava-trigger-lpi4a.result }}" != failure ]
+  # results:
+  #   needs: [kunit-test, kernel-build, lava-trigger-qemu, lava-trigger-sg2042, lava-trigger-k1, lava-trigger-lpi4a, check-patch, collect-result]
+  #   if: ${{ !cancelled() }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: show final result
+  #       run: |
+  #         # 所有需要运行的job都成功则整体成功
+  #         [ "${{ needs.kunit-test.result }}" != failure ] && \
+  #         [ "${{ needs.kernel-build.result }}" != failure ] && \
+  #         [ "${{ needs.check-patch.result }}" != failure ] && \
+  #         [ "${{ needs.collect-result.result }}" != failure ] && \
+  #         [ "${{ needs.lava-trigger-qemu.result }}" != failure ] && \
+  #         [ "${{ needs.lava-trigger-sg2042.result }}" != failure ] && \
+  #         [ "${{ needs.lava-trigger-k1.result }}" != failure ] && \
+  #         [ "${{ needs.lava-trigger-lpi4a.result }}" != failure ]
