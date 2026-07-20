@@ -18,7 +18,7 @@ on:
       guix_image:
         type: string
         description: 'guix docker镜像'
-        default: 'hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:release'
+        default: 'hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:openeuler-release'
 
     outputs:
       kernel_files_url:
