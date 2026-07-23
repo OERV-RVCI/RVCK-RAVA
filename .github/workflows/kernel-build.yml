@@ -65,18 +65,27 @@ jobs:
         run: docker run --rm --platform linux/riscv64 alpine uname -a
 
       - name: kernel-build
+        id: kernel-build
         run: |
-          
+          set -eo pipefail
           mkdir -p "${kernel_result_dir}"
+          if (
           docker run --pull=always --privileged --rm \
             -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
             "${{ inputs.guix_image }}" \
             guix-cross-build ${{ inputs.commit_url }} | tee "${kernel_result_dir}/build.log"
+          ); then
+            echo "kernel_build_result=true" >> $GITHUB_OUTPUT
+          else
+            echo "kernel_build_result=false" >> $GITHUB_OUTPUT
+          fi
       
       - name: show guix log
         if: ${{ !cancelled() }}
         run: |
           for logfile in "${kernel_result_dir}"/*/*.log; do
+            if [ ! -f "$logfile" ]; then continue; fi
+
             echo "--------------------"
             echo "logfile: ${logfile##*/}"
             echo "--------------------"
@@ -87,10 +96,10 @@ jobs:
 
       - name: publish kernel
         id: publish-kernel
+        if: ${{ !cancelled() }}
         env:
           RSYNC_PASSWORD: ${{ secrets.rync_passphrase }}
         run: |
-          
           rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
           echo "kernel_files_domain_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
@@ -101,11 +110,12 @@ jobs:
         if: ${{ !cancelled() }}
         id: summary
         env:
+          kernel_build_result: ${{ steps.kernel-build.outputs.kernel_build_result }}
           kernel_files_domain_url: ${{ steps.publish-kernel.outputs.kernel_files_domain_url }}
           kernel_files_url: ${{ steps.publish-kernel.outputs.kernel_files_url }}
           upload_dir: ${{ inputs.upload_dir }}
         run: |
-          if [ "$kernel_files_url" != "" ]; then
+          if [ "$kernel_build_result" = true ]; then
             result="Kernel build succeeded: [${upload_dir}]($kernel_files_domain_url)/"
           else
             result="Kernel build failed."
@@ -137,5 +147,5 @@ jobs:
           \`\`\`
           EEE
           
-          [ "$kernel_files_url" != "" ] # 设置步骤状态
+          [ "$kernel_build_result" = true ] # 设置步骤状态
 
