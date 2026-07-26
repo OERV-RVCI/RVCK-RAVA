@@ -153,6 +153,7 @@ jobs:
       testcase_ref: ${{ needs.parse-request.outputs.testcase_ref }}
       lava_template: ${{ needs.parse-request.outputs.lava_template }}
       testcase_path: ${{ needs.parse-request.outputs.lava_testcase_path }}
+      max_wait_attempts: 40
   
   run-codelint:
     needs: [parse-request]

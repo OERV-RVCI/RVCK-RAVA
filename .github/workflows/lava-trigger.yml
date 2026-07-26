@@ -53,6 +53,12 @@ on:
         required: false
         type: string
         default: 'math'
+      
+      max_wait_attempts:
+        description: 'lava 任务最大等待次数，每次6h'
+        required: false
+        type: number
+        default: 1 
     
     secrets:
       lava_token:
@@ -77,6 +83,7 @@ jobs:
       testitem_name: ${{ steps.gen_var.outputs.testitem_name }}
       rootfs_download_url: ${{ steps.gen_var.outputs.rootfs_download_url }}
       device_type: ${{ steps.gen_var.outputs.device_type }}
+      wait_attempts: ${{ steps.gen_var.outputs.wait_attempts }}
     runs-on: 'ubuntu-latest'
 
     steps:
@@ -100,6 +107,7 @@ jobs:
           input_rootfs_download_url: ${{ inputs.rootfs_download_url }}
           input_kernel_md5sum: ${{ inputs.kernel_md5sum }}
           input_initramfs_md5sum: ${{ inputs.initramfs_md5sum }}
+          max_wait_attempts: ${{ inputs.max_wait_attempts }}
         shell: bash
         run: |
           set -x
@@ -145,6 +153,16 @@ jobs:
             ["qemu"]=""
           )
           echo "dtb_url=${dtb_map[${device_type}]:-"UNKNOWN_DEVICE_TYPE"}" >> $GITHUB_OUTPUT
+          
+          # 生成数组 [1,2,3,...,max]
+          wait_attempts=$(python3 << EOF
+          import json
+          print(json.dumps(list(range(1, $max_wait_attempts + 1))))
+          EOF
+          )
+          echo "wait_attempts=$wait_attempts" >> $GITHUB_OUTPUT
+
+
 
       - name: setup_lava_template
         shell: python3 {0}
@@ -294,7 +312,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        wait: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
+        wait: ${{ fromJSON(needs.lava-trigger.outputs.wait_attempts) }}
     steps:
       - id: check-result
         uses: actions/cache@v4.2.3
