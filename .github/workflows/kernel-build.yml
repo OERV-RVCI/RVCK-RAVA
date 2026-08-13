@@ -55,6 +55,34 @@ jobs:
         run: |
           sudo rm -rf ./* || true
 
+      - name: Wait for lock to disappear
+        run: |
+          lock_file="/tmp/kernel-build.lock"
+          max_wait_minutes=120
+          interval_seconds=30
+          waited=0
+
+          echo "Checking for existing lock..."
+
+          while [ -f "$lock_file" ]; do
+            if [ $waited -ge $((max_wait_minutes * 60)) ]; then
+              echo "ERROR: Timeout waiting for lock to disappear after ${max_wait_minutes} minutes"
+              exit 1
+            fi
+            echo "Lock exists, waiting ${interval_seconds} seconds... (waited ${waited}s)"
+            sleep $interval_seconds
+            waited=$((waited + interval_seconds))
+          done
+
+          echo "No lock found, proceeding..."
+
+      - name: Create lock
+        run: |
+          lock_file="/tmp/kernel-build.lock"
+          lock_content="Locked by workflow run: ${{ github.run_id }} at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "$lock_content" > "$lock_file"
+          echo "Lock created at ${lock_file}"
+
       - name: binfmt_misc mount before setup qemu
         run: ls -alh /proc/sys/fs/binfmt_misc
 
@@ -148,4 +176,11 @@ jobs:
           EEE
           
           [ "$kernel_build_result" = true ] # 设置步骤状态
+
+      - name: Delete lock
+        if: always()
+        run: |
+          lock_file="/tmp/kernel-build.lock"
+          rm -f "$lock_file"
+          echo "Lock deleted at ${lock_file}"
 
