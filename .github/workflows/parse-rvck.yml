@@ -266,7 +266,7 @@ jobs:
           echo "ISSUE_ID=$(cat ISSUE_ID)" >> $GITHUB_OUTPUT
           echo "COMMIT_URL=$(cat COMMIT_URL)" >> $GITHUB_OUTPUT
           echo "NEED_RUN_JOB=$(cat job || echo 'kunit-test,kernel-build,check-patch,lava-trigger')" >> $GITHUB_OUTPUT
-          echo "testcase_repo=$(cat testcase_repo || echo 'RVCK-Project/lavaci')" >> $GITHUB_OUTPUT
+          echo "testcase_repo=$(cat testcase_repo || echo 'https://git.openruyi.cn/wangliu-iscas/lavaci-mirror.git')" >> $GITHUB_OUTPUT
           echo "lava_hardware=$(cat lava_hardware || echo '')" >> $GITHUB_OUTPUT
           for f in lava_template_*; do
                 [ ! -f "$f" ] && continue

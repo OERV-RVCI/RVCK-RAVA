@@ -224,7 +224,7 @@ jobs:
                     .replace("${job_name}", job_name)\
                     .replace("${kernel_image_url}", kernel_download_url)\
                     .replace("${rootfs_image_url}", rootfs_download_url)\
-                    .replace("${testcase_repo}", f"https://github.com/{testcase_repo}.git")\
+                    .replace("${testcase_repo}", testcase_repo if testcase_repo.startswith('http', 'git@') else f"https://github.com/{testcase_repo}.git")\
                     .replace("${testitem_name}", testitem_name)\
                     .replace("${testcase_path}", testcase_path)\
                     .replace("${ltp_testsuite}", ltp_testsuite)\
