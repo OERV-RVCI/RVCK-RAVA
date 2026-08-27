@@ -89,8 +89,8 @@ jobs:
       lava_template: ${{ needs.parse-request.outputs.lava_template_qemu }}
       testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
-      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
-      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      kernel_md5sum: ${{ needs.kernel-build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel-build.outputs.initramfs_md5sum }}
       ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
 
   lava-trigger-sg2042:
@@ -104,8 +104,8 @@ jobs:
       lava_template: ${{ needs.parse-request.outputs.lava_template_sg2042 }}
       testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
-      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
-      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      kernel_md5sum: ${{ needs.kernel-build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel-build.outputs.initramfs_md5sum }}
       ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
   
   lava-trigger-k1:
@@ -119,8 +119,8 @@ jobs:
       lava_template: ${{ needs.parse-request.outputs.lava_template_k1 }}
       testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
-      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
-      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      kernel_md5sum: ${{ needs.kernel-build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel-build.outputs.initramfs_md5sum }}
       ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
 
   lava-trigger-lpi4a:
@@ -134,8 +134,8 @@ jobs:
       lava_template: ${{ needs.parse-request.outputs.lava_template_lpi4a }}
       testcase_path: ${{ needs.parse-request.outputs.testcase_path }}
       kernel_files_url: ${{ needs.kernel-build.outputs.kernel_files_url }}
-      kernel_md5sum: ${{ needs.kernel_build.outputs.kernel_md5sum }}
-      initramfs_md5sum: ${{ needs.kernel_build.outputs.initramfs_md5sum }}
+      kernel_md5sum: ${{ needs.kernel-build.outputs.kernel_md5sum }}
+      initramfs_md5sum: ${{ needs.kernel-build.outputs.initramfs_md5sum }}
       ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
 
   check-patch:
