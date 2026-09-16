@@ -54,6 +54,11 @@ jobs:
       - name: clean ws
         run: |
           sudo rm -rf ./* || true
+          # guix_result 里的文件是容器内 root 写入的, sudo 不可用时删不掉, 用容器兜底清理,
+          # 避免上次残留导致 md5sum 提取到其他数据
+          if [ -d "${kernel_result_dir}" ]; then
+            docker run --rm -v "$(pwd)/${kernel_result_dir}:/w" alpine sh -c 'find /w -mindepth 1 -print -delete; echo "---- after clean ----"; ls -la /w'
+          fi
 
       - name: binfmt_misc mount before setup qemu
         run: ls -alh /proc/sys/fs/binfmt_misc
@@ -149,3 +154,10 @@ jobs:
           
           [ "$kernel_build_result" = true ] # 设置步骤状态
 
+      - name: clean kernel result dir
+        if: ${{ always() }}
+        run: |
+          # 推送完成后清理本地结果目录, 避免残留文件影响下一次构建
+          if [ -d "${kernel_result_dir}" ]; then
+            docker run --rm -v "$(pwd)/${kernel_result_dir}:/w" alpine sh -c 'find /w -mindepth 1 -print -delete; echo "---- after clean ----"; ls -la /w' || true
+          fi
