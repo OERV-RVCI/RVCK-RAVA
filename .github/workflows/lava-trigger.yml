@@ -32,6 +32,11 @@ on:
         required: true
         type: string
 
+      testcase_repo_url:
+        description: 'lava 仓库完整地址, 传入时优先使用(如国内镜像), 不传默认按 testcase_repo 拼 github 地址'
+        required: false
+        type: string
+
       testcase_ref:
         description: lava 仓库分支 #'lava 仓库sha值'
         required: false
@@ -69,6 +74,7 @@ env:
   kernel_download_url: ${{ inputs.kernel_files_url }}/Image
   initramfs_download_url: ${{ inputs.kernel_files_url }}/initramfs.img
   testcase_repo: ${{ inputs.testcase_repo }}
+  testcase_repo_url: ${{ inputs.testcase_repo_url }}
   testcase_ref: ${{ inputs.testcase_ref }}
   lava_template: ${{ inputs.lava_template }}
   testcase_path: ${{ inputs.testcase_path }}
@@ -94,8 +100,11 @@ jobs:
 
       - name: install depends
         run: |
+          # 临时切换公共 DNS, 绕过 Azure DNS 对 ubuntu 源域名的解析故障
+          sudo rm -f /etc/resolv.conf
+          printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" | sudo tee /etc/resolv.conf
           sudo apt-get update
-          sudo apt-get install lavacli yq
+          sudo apt-get install -y lavacli yq
 
       - name: gen var
         id: gen_var
@@ -220,11 +229,16 @@ jobs:
           # 硬件设备需要dtb
           dtb_url = os.getenv("dtb_url", "")
 
+          # 优先使用调用方显式传入的仓库地址(如国内镜像), 未传时按 testcase_repo 拼 github 地址
+          testcase_repo_url = os.getenv("testcase_repo_url", "")
+          if not testcase_repo_url:
+              testcase_repo_url = f"https://github.com/{testcase_repo}.git"
+
           content = open(lava_template, "r").read()\
                     .replace("${job_name}", job_name)\
                     .replace("${kernel_image_url}", kernel_download_url)\
                     .replace("${rootfs_image_url}", rootfs_download_url)\
-                    .replace("${testcase_repo}", f"https://github.com/{testcase_repo}.git")\
+                    .replace("${testcase_repo}", testcase_repo_url)\
                     .replace("${testitem_name}", testitem_name)\
                     .replace("${testcase_path}", testcase_path)\
                     .replace("${ltp_testsuite}", ltp_testsuite)\
@@ -326,8 +340,10 @@ jobs:
       - name: install depends
         if: ${{ steps.check-result.outputs.cache-hit == false }}
         run: |
+          sudo rm -f /etc/resolv.conf
+          printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" | sudo tee /etc/resolv.conf
           sudo apt-get update
-          sudo apt-get install lavacli
+          sudo apt-get install -y lavacli
 
       - name: wait-result ${{ matrix.wait }}
         id: wait-result
@@ -364,8 +380,10 @@ jobs:
       lava_jobid: ${{ needs.lava-trigger.outputs.lava_jobid }}
     steps:
       - run: |
+          sudo rm -f /etc/resolv.conf
+          printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" | sudo tee /etc/resolv.conf
           sudo apt-get update
-          sudo apt-get install lavacli
+          sudo apt-get install -y lavacli
           set -x
           if [ "$lava_jobid" != "" ]; then
             for _ in {0..5}; do
@@ -390,8 +408,10 @@ jobs:
     steps:
       - name: install depends
         run: |
+          sudo rm -f /etc/resolv.conf
+          printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" | sudo tee /etc/resolv.conf
           sudo apt-get update
-          sudo apt-get install lavacli
+          sudo apt-get install -y lavacli
 
       - id: onfailure
         if: ${{ !needs.lava-trigger.outputs.lava_jobid }}
