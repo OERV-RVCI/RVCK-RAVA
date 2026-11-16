@@ -62,7 +62,7 @@ on:
    
 jobs:
   parse-request:
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     outputs:
       REPO: ${{ steps.parse-request.outputs.REPO }}
       FETCH_REF: ${{ steps.parse-request.outputs.FETCH_REF }}

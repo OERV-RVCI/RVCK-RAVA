@@ -20,14 +20,14 @@ jobs:
   kunit-test:
     outputs:
       summary_content: ${{ steps.run-kunit-test.outputs.sumary_content }}
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
 
 
     steps:
       - name: install pkg
         run: |
           sudo apt-get update
-          sudo apt-get install -y git gcc-riscv64-linux-gnu gcc-riscv64-unknown-elf make gcc g++ flex device-tree-compiler pahole dwarves libfuse-dev kmod  bzip2 xz-utils curl cpio bc libssl-dev libncurses-dev bison flex libelf-dev opensbi qemu-system-riscv qemu-efi-riscv64 u-boot-qemu
+          sudo apt-get install -y git gcc-riscv64-linux-gnu gcc-riscv64-unknown-elf make gcc g++ flex device-tree-compiler pahole dwarves libfuse-dev kmod  bzip2 xz-utils curl cpio bc libssl-dev libncurses-dev bison flex libelf-dev qemu-system-riscv64
       
       - name: checkout kernel-src
         env:

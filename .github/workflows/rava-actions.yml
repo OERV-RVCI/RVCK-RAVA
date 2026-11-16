@@ -8,7 +8,7 @@ on:
 
 jobs:
   parse-request:
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     outputs:
       lava_template: ${{ steps.parse.outputs.lava_template }}
       lava_testcase_path: ${{ steps.parse.outputs.lava_testcase_path }}

@@ -41,7 +41,7 @@ jobs:
     outputs:
       event_id: ${{ steps.append-content.outputs.event_id }}
       event_name: ${{ steps.append-content.outputs.event_name }}
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     steps:
       - name: show-info
         run: |
