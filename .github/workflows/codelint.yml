@@ -26,7 +26,7 @@ jobs:
     outputs:
       shellcheck_result: ${{ steps.check.outputs.shellcheck_result }}
       yamllint_result: ${{ steps.check.outputs.yamllint_result }}
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     strategy:
       matrix:
         check_type: [shellcheck, yamllint]
@@ -149,7 +149,7 @@ jobs:
     outputs:
       summary: ${{ steps.summary.outputs.summary }}
     needs: [code-lint]
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     steps:
       - id: summary
         run: |

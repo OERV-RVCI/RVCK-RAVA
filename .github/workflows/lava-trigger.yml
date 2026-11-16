@@ -90,7 +90,7 @@ jobs:
       rootfs_download_url: ${{ steps.gen_var.outputs.rootfs_download_url }}
       device_type: ${{ steps.gen_var.outputs.device_type }}
       wait_attempts: ${{ steps.gen_var.outputs.wait_attempts }}
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
 
     steps:
       - uses: actions/checkout@v6
@@ -320,7 +320,7 @@ jobs:
   lava-result:
     needs: [lava-trigger]
     if: ${{ needs.lava-trigger.outputs.lava_jobid }}
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     env:
       lava_jobid: ${{ needs.lava-trigger.outputs.lava_jobid }}
     strategy:
@@ -373,7 +373,7 @@ jobs:
           path: is_lava_finish.txt
           
   on-cancel:
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     needs: [lava-trigger, lava-result]
     if: ${{ cancelled() }}
     env: 
@@ -397,7 +397,7 @@ jobs:
   collect-summary:
     outputs:
       summary_content: ${{ steps.summary.outputs.summary_content || steps.onfailure.outputs.summary_content }}
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     needs: [lava-trigger, lava-result]
     if: ${{ !cancelled() }}
     env: 

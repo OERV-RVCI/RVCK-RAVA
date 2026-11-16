@@ -199,7 +199,7 @@ jobs:
   # results:
   #   needs: [kunit-test, kernel-build, lava-trigger-qemu, lava-trigger-sg2042, lava-trigger-k1, lava-trigger-lpi4a, check-patch, collect-result]
   #   if: ${{ !cancelled() }}
-  #   runs-on: ubuntu-latest
+  #   runs-on: ubuntu-24.04
   #   steps:
   #     - name: show final result
   #       run: |
