@@ -27,7 +27,7 @@ jobs:
       - name: install pkg
         run: |
           sudo apt-get update
-          sudo apt-get install -y git gcc-riscv64-linux-gnu gcc-riscv64-unknown-elf make gcc g++ flex device-tree-compiler pahole dwarves libfuse-dev kmod  bzip2 xz-utils curl cpio bc libssl-dev libncurses-dev bison flex libelf-dev qemu-system-riscv64
+          sudo apt-get install -y git gcc-riscv64-linux-gnu gcc-riscv64-unknown-elf make gcc g++ flex device-tree-compiler pahole dwarves libfuse-dev kmod  bzip2 xz-utils curl cpio bc libssl-dev libncurses-dev bison flex libelf-dev qemu-system-riscv
       
       - name: checkout kernel-src
         env:
