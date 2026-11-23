@@ -19,7 +19,15 @@ on:
         type: string
         description: 'guix docker镜像'
         default: 'hub.oepkgs.net/oerv-ci/guix-kernel-cross-build:openeuler-release'
-
+      initramfs_rootfs_build_image:
+        type: string
+        description: 'initramfs-rootfs-build docker镜像'
+        default: 'hub.oepkgs.net/rvci/rava-initramfs-rootfs-build:openeuler-release'
+      initramfs_rootfs_build_profile:
+        type: string
+        description: 'initramfs-rootfs-build profile'
+        default: 'openEuler-24.03-LTS-SP3-RVA20'
+  
     outputs:
       kernel_files_url:
         value: ${{ jobs.kernel-build.outputs.kernel_files_url }}
@@ -48,7 +56,7 @@ jobs:
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      kernel_result_dir: guix_result
+      kernel_result_dir: kernel_build_result
 
     steps:
       - name: clean ws
@@ -94,6 +102,16 @@ jobs:
             echo "===================="
             echo ""
           done
+      - name: initramfs-rootfs-build
+        id: initramfs-rootfs-build
+        run: |
+          # 运行构建
+          docker run --privileged --rm \
+          -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
+          -v "$(pwd)/${kernel_result_dir}:/srv/initramfs_rootfs_result" \
+          -e GH_TOKEN="${GH_TOKEN}" \
+          ${{ inputs.initramfs_rootfs_build_image }} \
+          initramfs-rootfs-build /srv/guix_result/* "${{ inputs.initramfs_rootfs_build_profile }}"
 
       - name: publish kernel
         id: publish-kernel
@@ -105,7 +123,8 @@ jobs:
           echo "kernel_files_domain_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
-          echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
+          echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/${{ inputs.initramfs_rootfs_build_profile }}/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
+          echo "rootfs_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs.tar.gz"
       
       - name: summary
         if: ${{ !cancelled() }}
