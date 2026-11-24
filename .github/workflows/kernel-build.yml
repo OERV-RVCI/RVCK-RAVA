@@ -26,7 +26,7 @@ on:
       initramfs_rootfs_build_profile:
         type: string
         description: 'initramfs-rootfs-build profile'
-        default: 'openEuler-24.03-LTS-SP3-RVA20'
+        default: 'openeuler-rva20'
   
     outputs:
       kernel_files_url:
@@ -52,6 +52,7 @@ jobs:
       kernel_files_url: ${{ steps.publish-kernel.outputs.kernel_files_url }}
       kernel_md5sum: ${{ steps.publish-kernel.outputs.kernel_md5sum }}
       initramfs_md5sum: ${{ steps.publish-kernel.outputs.initramfs_md5sum }}
+      rootfs_url: ${{ steps.publish-kernel.outputs.rootfs_url }}
       summary_content: ${{ steps.summary.outputs.summary_content }}
 
     env:
@@ -82,7 +83,7 @@ jobs:
             -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
             -e GH_TOKEN="${GH_TOKEN}" \
             "${{ inputs.guix_image }}" \
-            guix-cross-build ${{ inputs.commit_url }} | tee "${kernel_result_dir}/build.log"
+            guix-cross-build "${{ inputs.commit_url }}" 2>&1 | tee "${kernel_result_dir}/guix-cross-build.log"
           ); then
             echo "kernel_build_result=true" >> $GITHUB_OUTPUT
           else
@@ -102,6 +103,7 @@ jobs:
             echo "===================="
             echo ""
           done
+  
       - name: initramfs-rootfs-build
         id: initramfs-rootfs-build
         run: |
@@ -112,7 +114,7 @@ jobs:
           -v "$(pwd)/${kernel_result_dir}:/srv/initramfs_rootfs_result" \
           -e GH_TOKEN="${GH_TOKEN}" \
           ${{ inputs.initramfs_rootfs_build_image }} \
-          initramfs-rootfs-build "/srv/guix_result/$_commit" "${{ inputs.initramfs_rootfs_build_profile }}"
+          initramfs-rootfs-build "/srv/guix_result/$_commit" "${{ inputs.initramfs_rootfs_build_profile }}" 2>&1 | tee "${kernel_result_dir}/initramfs-rootfs-build.log"
 
       - name: publish kernel
         id: publish-kernel
@@ -125,7 +127,7 @@ jobs:
           echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
           echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/${{ inputs.initramfs_rootfs_build_profile }}/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
-          echo "rootfs_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs.tar.gz"
+          echo "rootfs_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs.tar.gz" >> $GITHUB_OUTPUT
       
       - name: summary
         if: ${{ !cancelled() }}
