@@ -80,7 +80,7 @@ jobs:
       
   lava-trigger-qemu:
     needs: [parse-request, kernel-build]
-    if: ${{ needs.parse-request.outputs.lava_template_qemu }}
+    if: ${{ needs.parse-request.outputs.lava_template_qemu && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') }}
     uses: ./.github/workflows/lava-trigger.yml
     secrets: 
       lava_token: ${{ secrets.LAVA_TOKEN }}
@@ -96,7 +96,7 @@ jobs:
 
   lava-trigger-sg2042:
     needs: [parse-request, kernel-build]
-    if: ${{ needs.parse-request.outputs.lava_template_sg2042 }}
+    if: ${{ needs.parse-request.outputs.lava_template_sg2042 && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') }}
     uses: ./.github/workflows/lava-trigger.yml
     secrets: 
       lava_token: ${{ secrets.LAVA_TOKEN }}
@@ -112,7 +112,7 @@ jobs:
   
   lava-trigger-k1:
     needs: [parse-request, kernel-build]
-    if: ${{ needs.parse-request.outputs.lava_template_k1 }}
+    if: ${{ needs.parse-request.outputs.lava_template_k1 && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') }}
     uses: ./.github/workflows/lava-trigger.yml
     secrets: 
       lava_token: ${{ secrets.LAVA_TOKEN }}
@@ -128,7 +128,7 @@ jobs:
 
   lava-trigger-lpi4a:
     needs: [parse-request, kernel-build]
-    if: ${{ needs.parse-request.outputs.lava_template_lpi4a }}
+    if: ${{ needs.parse-request.outputs.lava_template_lpi4a && contains(needs.parse-request.outputs.NEED_RUN_JOB, 'lava-trigger') }}
     uses: ./.github/workflows/lava-trigger.yml
     secrets: 
       lava_token: ${{ secrets.LAVA_TOKEN }}

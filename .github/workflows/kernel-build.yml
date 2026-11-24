@@ -110,12 +110,14 @@ jobs:
         id: initramfs-rootfs-build
         run: |
           # 运行构建
+          set -eo pipefail
           _commit="$(ls ${kernel_result_dir})"
+          echo "commit_sha: $_commit"
           docker run --pull=always --privileged --rm \
           -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
           -v "$(pwd)/${kernel_result_dir}:/srv/initramfs_rootfs_result" \
           -e GH_TOKEN="${GH_TOKEN}" \
-          ${{ inputs.initramfs_rootfs_build_image }} \
+          "${{ inputs.initramfs_rootfs_build_image }}" \
           initramfs-rootfs-build "/srv/guix_result/$_commit" "${{ inputs.initramfs_rootfs_build_profile }}" 2>&1 | tee "${kernel_result_dir}/initramfs-rootfs-build.log"
 
       - name: publish kernel
