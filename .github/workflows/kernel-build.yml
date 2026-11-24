@@ -106,12 +106,13 @@ jobs:
         id: initramfs-rootfs-build
         run: |
           # 运行构建
-          docker run --privileged --rm \
+          _commit="$(ls ${kernel_result_dir})"
+          docker run --pull=always --privileged --rm \
           -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
           -v "$(pwd)/${kernel_result_dir}:/srv/initramfs_rootfs_result" \
           -e GH_TOKEN="${GH_TOKEN}" \
           ${{ inputs.initramfs_rootfs_build_image }} \
-          initramfs-rootfs-build /srv/guix_result/* "${{ inputs.initramfs_rootfs_build_profile }}"
+          initramfs-rootfs-build "/srv/guix_result/$_commit" "${{ inputs.initramfs_rootfs_build_profile }}"
 
       - name: publish kernel
         id: publish-kernel
