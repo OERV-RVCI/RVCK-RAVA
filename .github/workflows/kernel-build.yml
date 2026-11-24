@@ -37,6 +37,8 @@ on:
         value: ${{ jobs.kernel-build.outputs.initramfs_md5sum }}
       summary_content:
         value: ${{ jobs.kernel-build.outputs.summary_content }}
+      rootfs_download_url:
+        value: ${{ jobs.kernel-build.outputs.rootfs_download_url }}
     
     secrets:
       rync_passphrase: 
@@ -52,7 +54,7 @@ jobs:
       kernel_files_url: ${{ steps.publish-kernel.outputs.kernel_files_url }}
       kernel_md5sum: ${{ steps.publish-kernel.outputs.kernel_md5sum }}
       initramfs_md5sum: ${{ steps.publish-kernel.outputs.initramfs_md5sum }}
-      rootfs_url: ${{ steps.publish-kernel.outputs.rootfs_url }}
+      rootfs_download_url: ${{ steps.publish-kernel.outputs.rootfs_download_url }}
       summary_content: ${{ steps.summary.outputs.summary_content }}
 
     env:
@@ -127,7 +129,7 @@ jobs:
           echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
           echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/${{ inputs.initramfs_rootfs_build_profile }}/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
-          echo "rootfs_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs.tar.gz" >> $GITHUB_OUTPUT
+          echo "rootfs_download_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs.tar.gz" >> $GITHUB_OUTPUT
       
       - name: summary
         if: ${{ !cancelled() }}
