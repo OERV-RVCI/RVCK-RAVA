@@ -60,6 +60,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       kernel_result_dir: kernel_build_result
+      initramfs_rootfs_result_dir: initramfs_rootfs_build_result
 
     steps:
       - name: clean ws
@@ -80,6 +81,7 @@ jobs:
         shell: bash
         run: |
           set -eo pipefail
+
           mkdir -p "${kernel_result_dir}"
           if (
           docker run --pull=always --privileged --rm \
@@ -113,11 +115,14 @@ jobs:
         run: |
           # 运行构建
           set -eo pipefail
+          
           _commit="$(ls ${kernel_result_dir})"
           echo "commit_sha: $_commit"
+
+          mkdir -p "${initramfs_rootfs_result_dir}"
           docker run --pull=always --privileged --rm \
           -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
-          -v "$(pwd)/${kernel_result_dir}:/srv/initramfs_rootfs_result" \
+          -v "$(pwd)/${initramfs_rootfs_result_dir}:/srv/initramfs_rootfs_result" \
           -e GH_TOKEN="${GH_TOKEN}" \
           "${{ inputs.initramfs_rootfs_build_image }}" \
           initramfs-rootfs-build "/srv/guix_result/$_commit" "${{ inputs.initramfs_rootfs_build_profile }}"
@@ -129,11 +134,12 @@ jobs:
           RSYNC_PASSWORD: ${{ secrets.rync_passphrase }}
         run: |
           rsync -av --progress --mkpath "${kernel_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
+          rsync -av --progress --mkpath "${initramfs_rootfs_result_dir}"/*/* rvck@10.30.190.110::RVCK/${{ inputs.upload_dir }}/
           echo "kernel_files_domain_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
           echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/${{ inputs.initramfs_rootfs_build_profile }}/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
-          echo "rootfs_download_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs.tar.gz" >> $GITHUB_OUTPUT
+          echo "rootfs_download_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs" >> $GITHUB_OUTPUT
       
       - name: summary
         if: ${{ !cancelled() }}
