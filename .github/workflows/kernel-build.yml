@@ -77,6 +77,7 @@ jobs:
 
       - name: kernel-build
         id: kernel-build
+        shell: bash
         run: |
           set -eo pipefail
           mkdir -p "${kernel_result_dir}"
@@ -85,7 +86,7 @@ jobs:
             -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
             -e GH_TOKEN="${GH_TOKEN}" \
             "${{ inputs.guix_image }}" \
-            guix-cross-build "${{ inputs.commit_url }}" 2>&1 | tee "${kernel_result_dir}/guix-cross-build.log"
+            guix-cross-build "${{ inputs.commit_url }}"
           ); then
             echo "kernel_build_result=true" >> $GITHUB_OUTPUT
           else
@@ -108,6 +109,7 @@ jobs:
   
       - name: initramfs-rootfs-build
         id: initramfs-rootfs-build
+        shell: bash
         run: |
           # 运行构建
           set -eo pipefail
@@ -118,7 +120,7 @@ jobs:
           -v "$(pwd)/${kernel_result_dir}:/srv/initramfs_rootfs_result" \
           -e GH_TOKEN="${GH_TOKEN}" \
           "${{ inputs.initramfs_rootfs_build_image }}" \
-          initramfs-rootfs-build "/srv/guix_result/$_commit" "${{ inputs.initramfs_rootfs_build_profile }}" 2>&1 | tee "${kernel_result_dir}/initramfs-rootfs-build.log"
+          initramfs-rootfs-build "/srv/guix_result/$_commit" "${{ inputs.initramfs_rootfs_build_profile }}"
 
       - name: publish kernel
         id: publish-kernel
@@ -139,7 +141,7 @@ jobs:
         env:
           kernel_build_result: ${{ steps.kernel-build.outputs.kernel_build_result }}
           kernel_files_domain_url: ${{ steps.publish-kernel.outputs.kernel_files_domain_url }}
-          kernel_files_url: ${{ steps.publish-kernel.outputs.kernel_files_url }}
+          rootfs_download_url: ${{ steps.publish-kernel.outputs.rootfs_download_url }}
           upload_dir: ${{ inputs.upload_dir }}
         run: |
           if [ "$kernel_build_result" = true ]; then
@@ -158,6 +160,10 @@ jobs:
             done
             echo ""
             echo "- detail log: ${summary_url}"
+            echo '```bash'
+            find "${kernel_result_dir}"
+            echo '```'
+            echo ''
           } | tee summary
           
           echo "summary_content<<EOF" >> $GITHUB_OUTPUT
@@ -165,14 +171,6 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
           
           cat summary > $GITHUB_STEP_SUMMARY
-
-          cat > $GITHUB_STEP_SUMMARY << EEE
-          $(cat summary)
-          
-          \`\`\`log
-          $(cat "${kernel_result_dir}"/build.log)
-          \`\`\`
-          EEE
           
           [ "$kernel_build_result" = true ] # 设置步骤状态
 
