@@ -115,7 +115,7 @@ jobs:
         run: |
           # 运行构建
           set -eo pipefail
-          
+
           _commit="$(ls ${kernel_result_dir})"
           echo "commit_sha: $_commit"
 
@@ -123,6 +123,7 @@ jobs:
           docker run --pull=always --privileged --rm \
           -v "$(pwd)/${kernel_result_dir}:/srv/guix_result" \
           -v "$(pwd)/${initramfs_rootfs_result_dir}:/srv/initramfs_rootfs_result" \
+          -v /dev:/dev \
           -e GH_TOKEN="${GH_TOKEN}" \
           "${{ inputs.initramfs_rootfs_build_image }}" \
           initramfs-rootfs-build "/srv/guix_result/$_commit" "${{ inputs.initramfs_rootfs_build_profile }}"
@@ -138,8 +139,8 @@ jobs:
           echo "kernel_files_domain_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
-          echo "initramfs_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/${{ inputs.initramfs_rootfs_build_profile }}/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
           echo "rootfs_download_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs" >> $GITHUB_OUTPUT
+          echo "initramfs_md5sum=$(awk '{print $1}' "${initramfs_rootfs_result_dir}"/*/${{ inputs.initramfs_rootfs_build_profile }}/initramfs/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
       
       - name: summary
         if: ${{ !cancelled() }}
@@ -167,7 +168,7 @@ jobs:
             echo ""
             echo "- detail log: ${summary_url}"
             echo '```bash'
-            find "${kernel_result_dir}"
+            find "${kernel_result_dir}" -mindepth 1 -maxdepth 2
             echo '```'
             echo ''
           } | tee summary

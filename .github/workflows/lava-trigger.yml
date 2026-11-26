@@ -73,7 +73,7 @@ on:
 env:
   kernel_files_url: ${{ inputs.kernel_files_url }}
   kernel_download_url: ${{ inputs.kernel_files_url }}/Image
-  initramfs_download_url: ${{ inputs.kernel_files_url }}/initramfs.img
+  initramfs_download_url: ${{ inputs.kernel_files_url }}/initramfs/initramfs.img
   testcase_repo: ${{ inputs.testcase_repo }}
   testcase_repo_url: ${{ inputs.testcase_repo_url }}
   testcase_ref: ${{ inputs.testcase_ref }}
