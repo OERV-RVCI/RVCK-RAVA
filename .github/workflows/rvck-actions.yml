@@ -93,6 +93,7 @@ jobs:
       initramfs_md5sum: ${{ needs.kernel-build.outputs.initramfs_md5sum }}
       ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
       rootfs_download_url: ${{ needs.kernel-build.outputs.rootfs_download_url }}
+      initramfs_download_url: ${{ needs.kernel-build.outputs.initramfs_download_url }}
 
   lava-trigger-sg2042:
     needs: [parse-request, kernel-build]
@@ -109,6 +110,7 @@ jobs:
       initramfs_md5sum: ${{ needs.kernel-build.outputs.initramfs_md5sum }}
       ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
       rootfs_download_url: ${{ needs.kernel-build.outputs.rootfs_download_url }}
+      initramfs_download_url: ${{ needs.kernel-build.outputs.initramfs_download_url }}
   
   lava-trigger-k1:
     needs: [parse-request, kernel-build]
@@ -125,6 +127,7 @@ jobs:
       initramfs_md5sum: ${{ needs.kernel-build.outputs.initramfs_md5sum }}
       ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
       rootfs_download_url: ${{ needs.kernel-build.outputs.rootfs_download_url }}
+      initramfs_download_url: ${{ needs.kernel-build.outputs.initramfs_download_url }}
 
   lava-trigger-lpi4a:
     needs: [parse-request, kernel-build]
@@ -141,6 +144,7 @@ jobs:
       initramfs_md5sum: ${{ needs.kernel-build.outputs.initramfs_md5sum }}
       ltp_testsuite: ${{ needs.parse-request.outputs.ltp_testsuite }}
       rootfs_download_url: ${{ needs.kernel-build.outputs.rootfs_download_url }}
+      initramfs_download_url: ${{ needs.kernel-build.outputs.initramfs_download_url }}
 
   check-patch:
     needs: [parse-request]

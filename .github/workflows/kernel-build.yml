@@ -39,6 +39,8 @@ on:
         value: ${{ jobs.kernel-build.outputs.summary_content }}
       rootfs_download_url:
         value: ${{ jobs.kernel-build.outputs.rootfs_download_url }}
+      initramfs_download_url:
+        value: ${{ jobs.kernel-build.outputs.initramfs_download_url }}
     
     secrets:
       rync_passphrase: 
@@ -54,6 +56,7 @@ jobs:
       kernel_files_url: ${{ steps.publish-kernel.outputs.kernel_files_url }}
       kernel_md5sum: ${{ steps.publish-kernel.outputs.kernel_md5sum }}
       initramfs_md5sum: ${{ steps.publish-kernel.outputs.initramfs_md5sum }}
+      initramfs_download_url: ${{ steps.publish-kernel.outputs.initramfs_download_url }}
       rootfs_download_url: ${{ steps.publish-kernel.outputs.rootfs_download_url }}
       summary_content: ${{ steps.summary.outputs.summary_content }}
 
@@ -139,8 +142,10 @@ jobs:
           echo "kernel_files_domain_url=https://repo.tarsier-infra.isrc.ac.cn/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_files_url=http://10.30.190.110/openEuler-RISC-V/RVCK/OERV-RVCI/${{ inputs.upload_dir }}" >> $GITHUB_OUTPUT
           echo "kernel_md5sum=$(awk '{print $1}' "${kernel_result_dir}"/*/Image.md5sum)" >> $GITHUB_OUTPUT
-          echo "rootfs_download_url=${kernel_files_url}/${{ inputs.initramfs_rootfs_build_profile }}/rootfs/${{ inputs.initramfs_rootfs_build_profile }}-rootfs" >> $GITHUB_OUTPUT
-          echo "initramfs_md5sum=$(awk '{print $1}' "${initramfs_rootfs_result_dir}"/*/${{ inputs.initramfs_rootfs_build_profile }}/initramfs/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
+          profile_dir="$(cd "${initramfs_rootfs_result_dir}"/*/* && ls)"
+          echo "rootfs_download_url=${kernel_files_url}/${profile_dir}/rootfs/${profile_dir}-rootfs" >> $GITHUB_OUTPUT
+          echo "initramfs_download_url=${kernel_files_url}/${profile_dir}/initramfs/initramfs.img" >> $GITHUB_OUTPUT
+          echo "initramfs_md5sum=$(awk '{print $1}' "${initramfs_rootfs_result_dir}"/*/${profile_dir}/initramfs/initramfs.img.md5sum)" >> $GITHUB_OUTPUT
       
       - name: summary
         if: ${{ !cancelled() }}
@@ -152,7 +157,7 @@ jobs:
           upload_dir: ${{ inputs.upload_dir }}
         run: |
           if [ "$kernel_build_result" = true ]; then
-            result="Kernel build succeeded: [${upload_dir}]($kernel_files_domain_url)/"
+            result="Kernel build succeeded: [${upload_dir}]($kernel_files_domain_url)"
           else
             result="Kernel build failed."
           fi
@@ -162,13 +167,11 @@ jobs:
             echo "## Kernel Build Result"
             echo ""
             echo "- $result"
-            cat "${kernel_result_dir}"/*/*.md5sum 2>/dev/null | while read -r l; do
-                echo "- $l"
-            done
             echo ""
             echo "- detail log: ${summary_url}"
             echo '```bash'
-            find "${kernel_result_dir}" -mindepth 1 -maxdepth 2
+            (cd "${kernel_result_dir}"/*/ && ls -ap)
+            (cd "${initramfs_rootfs_result_dir}"/*/* && find . -type f)
             echo '```'
             echo ''
           } | tee summary

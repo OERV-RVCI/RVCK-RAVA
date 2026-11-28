@@ -11,6 +11,11 @@ on:
         description: '内核文件夹链接'
         type: string
         required: true
+      
+      initramfs_download_url:
+        description: 'initramfs 下载链接'
+        required: true
+        type: string
 
       kernel_md5sum:
         description: '内核md5sum'
@@ -73,7 +78,7 @@ on:
 env:
   kernel_files_url: ${{ inputs.kernel_files_url }}
   kernel_download_url: ${{ inputs.kernel_files_url }}/Image
-  initramfs_download_url: ${{ inputs.kernel_files_url }}/initramfs/initramfs.img
+  initramfs_download_url: ${{ inputs.initramfs_download_url }}
   testcase_repo: ${{ inputs.testcase_repo }}
   testcase_repo_url: ${{ inputs.testcase_repo_url }}
   testcase_ref: ${{ inputs.testcase_ref }}
